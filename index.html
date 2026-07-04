@@ -1,0 +1,2224 @@
+<!--
+====================================================================
+BOE STUDIOS — MARKET INTELLIGENCE DASHBOARD (VPay Design System)
+====================================================================
+Single, self-contained HTML file. No build step, no external
+libraries beyond the Google Fonts CDN (DM Sans).
+
+OPTION A — Just open it
+  Double-click dashboard.html, or drag it into any browser.
+
+OPTION B — Serve on localhost
+  python -m http.server 8000   (or)   npx serve .
+  then open http://localhost:8000/dashboard.html
+
+DATA SOURCE
+   Figures transcribed from "Studio Comparative Analysis.md" (Mumbai
+   Studios — Comparative Analysis, dated July 4, 2026), covering all
+   14 studio locations from 21 PDF decks reviewed. Complete data is
+   available for the 4 core studios (Paxton, Seer AW, Seer GW,
+   Spotlight); other studios are included with available data and
+   "Not disclosed" where source decks did not provide the field.
+
+Update this file at any time by editing the STUDIO_DATA / INSIGHTS
+objects in the <script> block near the bottom — the UI regenerates
+itself from that data on load.
+====================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BOE Studios — Market Intelligence Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   DESIGN TOKENS — VPay design system
+   ================================================================ */
+:root{
+  --bg-page:        #f4f6f9;
+  --bg-card:        #ffffff;
+  --bg-elevated:    #ffffff;
+  --bg-sidebar:     #343a40;
+  --text-primary:   #212529;
+  --text-secondary: #6c757d;
+  --text-on-sidebar:      #e9ecef;
+  --text-on-sidebar-dim:  #9aa1a8;
+  --border-color:   #dee2e6;
+  --accent-primary: #0d6efd;
+  --accent-primary-contrast: #ffffff;
+  --success:        #198754;
+  --danger:         #dc3545;
+  --warning:        #ffc107;
+  --info:           #0dcaf0;
+  --row-hover:      rgba(0,0,0,0.04);
+  --radius:         10px;
+  --shadow:         none;
+
+  /* categorical / chart series — Miller Stone palette */
+  --c1:#4f6980; --c2:#849db1; --c3:#a2ceaa; --c4:#638b66;
+  --c5:#bfbb60; --c6:#f47942; --c7:#fbb04e; --c8:#b66353;
+  --c9:#d7ce9f; --c10:#b9aa97; --c11:#7e756d;
+}
+
+html.dark-mode{
+  --bg-page:        #121212;
+  --bg-card:        #1e1e1e;
+  --bg-elevated:    #2d2d2d;
+  --bg-sidebar:     #0d1117;
+  --text-primary:   #e1e1e1;
+  --text-secondary: #8b949e;
+  --text-on-sidebar:      #e1e1e1;
+  --text-on-sidebar-dim:  #7d848b;
+  --border-color:   #30363d;
+  --accent-primary: #58a6ff;
+  --accent-primary-contrast: #0d1117;
+  --row-hover:      rgba(255,255,255,0.05);
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0; background:var(--bg-page); color:var(--text-primary);
+  font-family:"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height:1.5; -webkit-font-smoothing:antialiased;
+  transition:background .15s ease, color .15s ease;
+}
+a{ color:var(--accent-primary); }
+:focus-visible{ outline:none; box-shadow:0 0 0 3px rgba(13,110,253,.25); border-radius:6px; }
+
+.uppercase-label{
+  text-transform:uppercase; letter-spacing:.08em; font-weight:700;
+}
+
+/* ================================================================
+   APP SHELL
+   ================================================================ */
+.app-shell{ display:flex; min-height:100vh; }
+
+/* ---------- Sidebar ---------- */
+.sidebar{
+  width:250px; flex:0 0 250px; background:var(--bg-sidebar);
+  display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
+  transition:width .18s ease, flex-basis .18s ease, min-width .18s ease;
+  z-index:60; overflow:hidden;
+}
+.sidebar.collapsed{ width:60px; flex-basis:60px; min-width:60px; }
+.sidebar.collapsed .brand-text,
+.sidebar.collapsed .label,
+.sidebar.collapsed .nav-section-label,
+.sidebar.collapsed .sidebar-footer-text{ display:none; }
+.sidebar.collapsed .sidebar-brand{ justify-content:center; padding:16px 0; }
+.sidebar.collapsed .sidebar-brand .mark{ width:30px; height:30px; font-size:.82rem; }
+.sidebar.collapsed .nav-item{ justify-content:center; padding:10px 0; }
+.sidebar.collapsed .collapse-btn{ justify-content:center; padding:10px 0; }
+.sidebar.collapsed .collapse-btn .icon{ transform:rotate(180deg); }
+.sidebar.collapsed .sidebar-footer{ padding:12px 0; display:flex; flex-direction:column; align-items:center; }
+.sidebar.collapsed .sidebar-nav{ padding:12px 6px; }
+.sidebar-brand{
+  display:flex; align-items:center; gap:10px; padding:20px 20px 16px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.sidebar-brand .mark{
+  width:34px; height:34px; border-radius:8px; background:var(--accent-primary);
+  color:var(--accent-primary-contrast); display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:.95rem; flex:0 0 auto;
+}
+.sidebar-brand .brand-text strong{ display:block; color:#fff; font-size:.95rem; letter-spacing:.02em; }
+.sidebar-brand .brand-text span{ display:block; color:var(--text-on-sidebar-dim); font-size:.7rem; margin-top:1px; }
+
+.sidebar-nav{ padding:16px 12px; display:flex; flex-direction:column; gap:4px; flex:1; }
+.nav-section-label{
+  font-size:.65rem; color:var(--text-on-sidebar-dim); padding:10px 12px 6px;
+  text-transform:uppercase; letter-spacing:.1em; font-weight:700;
+}
+.nav-item{
+  display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:8px;
+  color:var(--text-on-sidebar-dim); background:transparent; border:none; cursor:pointer;
+  font-family:inherit; font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  text-align:left; width:100%; transition:background .15s, color .15s;
+}
+.nav-item .icon{ width:18px; height:18px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; transition:transform .18s ease; }
+.nav-item .icon svg{ width:18px; height:18px; }
+.nav-item:hover{ background:rgba(255,255,255,.06); color:var(--text-on-sidebar); }
+.nav-item.active{ background:var(--accent-primary); color:#fff; }
+.nav-item .label{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.sidebar-footer{
+  padding:14px 20px 18px; border-top:1px solid rgba(255,255,255,.08);
+  color:var(--text-on-sidebar-dim); font-size:.7rem;
+}
+
+/* ---------- Main column ---------- */
+.main-col{ flex:1; min-width:0; max-width:100%; display:flex; flex-direction:column; overflow:hidden; }
+
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:var(--bg-card); border-bottom:1px solid var(--border-color);
+  padding:14px 28px; display:flex; align-items:center; gap:16px;
+}
+.topbar .page-title{ margin-right:auto; }
+.topbar .page-title h1{ margin:0; font-size:1.15rem; font-weight:700; }
+.topbar .page-title p{ margin:2px 0 0; font-size:.78rem; color:var(--text-secondary); }
+.menu-btn{
+  display:none; border:1px solid var(--border-color); background:var(--bg-card);
+  color:var(--text-secondary); border-radius:8px; width:34px; height:34px; cursor:pointer;
+  align-items:center; justify-content:center; font-size:1rem;
+}
+
+.theme-toggle{
+  display:flex; align-items:center; gap:8px; border:1px solid var(--border-color);
+  background:var(--bg-page); color:var(--text-secondary); border-radius:999px;
+  padding:7px 14px 7px 7px; font-size:.78rem; cursor:pointer; font-family:inherit; font-weight:600;
+}
+.theme-toggle .knob{
+  width:20px; height:20px; border-radius:50%; background:var(--accent-primary);
+  display:flex; align-items:center; justify-content:center; color:#fff; font-size:.72rem;
+}
+
+main.content{ flex:1; padding:28px; max-width:1440px; width:100%; margin:0 auto; }
+.page{ display:none; animation:fade .2s ease; }
+.page.active{ display:block; }
+@keyframes fade{ from{opacity:0;} to{opacity:1;} }
+
+h1{ font-size:1.4rem; margin:0 0 4px; }
+h2{
+  font-size:.82rem; margin:34px 0 14px; padding-top:10px; border-top:1px solid var(--border-color);
+  text-transform:uppercase; letter-spacing:.07em; font-weight:700; color:var(--text-secondary);
+}
+h2:first-of-type{ border-top:none; padding-top:0; margin-top:4px; }
+h3{ font-size:.92rem; margin:0 0 10px; font-weight:700; }
+.subtitle{ color:var(--text-secondary); font-size:.9rem; margin-bottom:22px; }
+
+/* ---------- Cards ---------- */
+.card{
+  background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius);
+  padding:18px 20px; margin-bottom:16px; box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.grid{ display:grid; gap:16px; }
+.grid.cols-2{ grid-template-columns:repeat(2,1fr); }
+.grid.cols-3{ grid-template-columns:repeat(3,1fr); }
+.grid.cols-4{ grid-template-columns:repeat(4,1fr); }
+.grid.cols-6{ grid-template-columns:repeat(6,1fr); }
+@media (max-width:960px){ .grid.cols-2,.grid.cols-3,.grid.cols-4,.grid.cols-6{ grid-template-columns:1fr; } }
+@media (max-width:1200px){ .grid.cols-6{ grid-template-columns:repeat(3,1fr); } }
+
+/* ---------- Filters ---------- */
+.filters{
+  display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end;
+  background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius);
+  padding:16px 18px; margin-bottom:20px;
+}
+.filter-group{ display:flex; flex-direction:column; gap:6px; min-width:170px; }
+.filter-group label{ font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-secondary); font-weight:700; }
+select, input[type=range]{
+  font-family:inherit; font-size:.86rem; padding:8px 10px; border-radius:8px;
+  border:1px solid var(--border-color); background:var(--bg-page); color:var(--text-primary);
+}
+select:focus, input[type=range]:focus{ box-shadow:0 0 0 3px rgba(13,110,253,.25); outline:none; }
+.chip-row{ display:flex; flex-wrap:wrap; gap:6px; }
+.chip{
+  font-size:.74rem; padding:6px 11px; border-radius:999px; border:1px solid var(--accent-primary);
+  background:transparent; color:var(--accent-primary); cursor:pointer; user-select:none; font-weight:600;
+  transition:background .12s, color .12s;
+}
+.chip:hover{ background:rgba(13,110,253,.08); }
+.chip.on{ background:var(--accent-primary); border-color:var(--accent-primary); color:#fff; }
+
+/* ---- Multi-select searchable dropdown ---- */
+.multi-select{ position:relative; width:100%; }
+.multi-select .ms-btn{
+  display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;
+  font-family:inherit; font-size:.82rem; padding:8px 10px; border-radius:8px;
+  border:1px solid var(--border-color); background:var(--bg-page); color:var(--text-primary);
+  cursor:pointer; text-align:left; transition:border-color .15s;
+}
+.multi-select .ms-btn:hover{ border-color:var(--accent-primary); }
+.multi-select .ms-btn .ms-label{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.multi-select .ms-btn .ms-count{
+  font-size:.7rem; background:var(--accent-primary); color:#fff; border-radius:999px;
+  padding:1px 8px; font-weight:700; flex:0 0 auto;
+}
+.multi-select .ms-btn .ms-arrow{ font-size:.6rem; color:var(--text-secondary); transition:transform .15s; }
+.multi-select.open .ms-btn .ms-arrow{ transform:rotate(180deg); }
+.multi-select.open .ms-btn{ border-color:var(--accent-primary); }
+.multi-select .ms-dropdown{
+  display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:100;
+  background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,.12); max-height:280px; overflow:hidden;
+  flex-direction:column;
+}
+.multi-select.open .ms-dropdown{ display:flex; }
+.multi-select .ms-search{
+  margin:8px 8px 0; padding:7px 10px; border-radius:6px; border:1px solid var(--border-color);
+  background:var(--bg-page); color:var(--text-primary); font-family:inherit; font-size:.8rem;
+  outline:none; flex:0 0 auto;
+}
+.multi-select .ms-search:focus{ border-color:var(--accent-primary); box-shadow:0 0 0 2px rgba(13,110,253,.15); }
+.multi-select .ms-options{ overflow-y:auto; flex:1; padding:4px 0; }
+.multi-select .ms-option{
+  display:flex; align-items:center; gap:8px; padding:7px 12px; cursor:pointer;
+  font-size:.8rem; color:var(--text-primary); transition:background .1s;
+}
+.multi-select .ms-option:hover{ background:var(--row-hover); }
+.multi-select .ms-option input[type=checkbox]{ accent-color:var(--accent-primary); margin:0; flex:0 0 auto; }
+.multi-select .ms-option .ms-opt-label{ flex:1; }
+.multi-select .ms-option.hidden{ display:none; }
+.multi-select .ms-empty{ padding:16px; text-align:center; color:var(--text-secondary); font-size:.8rem; }
+.multi-select .ms-clear{
+  display:block; width:100%; padding:7px; font-size:.72rem; text-align:center;
+  color:var(--danger); background:transparent; border:none; cursor:pointer; font-weight:600;
+  border-top:1px solid var(--border-color); font-family:inherit;
+}
+.multi-select .ms-clear:hover{ background:var(--row-hover); }
+.btn{
+  border:1px solid var(--border-color); background:var(--bg-page); color:var(--text-secondary);
+  border-radius:8px; padding:8px 16px; font-size:.8rem; cursor:pointer; height:36px; font-family:inherit; font-weight:600;
+}
+.btn:hover{ color:var(--text-primary); background:var(--row-hover); }
+.btn-primary{ background:var(--accent-primary); border-color:var(--accent-primary); color:#fff; }
+.btn-primary:hover{ filter:brightness(1.06); color:#fff; }
+
+/* ---------- Table ---------- */
+.table-wrap{ overflow-x:auto; border:1px solid var(--border-color); border-radius:var(--radius); }
+table{ border-collapse:collapse; width:100%; min-width:900px; font-size:.85rem; }
+thead th{
+  text-align:left; background:var(--bg-card); color:var(--text-primary); font-weight:700;
+  font-size:.68rem; text-transform:uppercase; letter-spacing:.06em;
+  padding:11px 14px; border-bottom:2px solid var(--border-color); white-space:nowrap;
+  position:sticky; top:0;
+}
+tbody td{ padding:12px 14px; border-bottom:1px solid var(--border-color); vertical-align:top; }
+tbody tr:hover{ background:var(--row-hover); }
+tbody tr:last-child td{ border-bottom:none; }
+td.num{ font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+.badge{
+  display:inline-block; font-size:.68rem; font-weight:700; padding:4px 10px; border-radius:999px;
+  letter-spacing:.02em;
+}
+.badge.primary{ background:rgba(220,53,69,.12); color:var(--danger); }
+.badge.secondary{ background:rgba(13,110,253,.12); color:var(--accent-primary); }
+.badge.tier-premium{ background:rgba(102,16,242,.14); color:#6610f2; }
+html.dark-mode .badge.tier-premium{ color:#b39dff; }
+.badge.tier-midpremium{ background:rgba(25,135,84,.14); color:var(--success); }
+.badge.tier-affordable{ background:rgba(255,193,7,.18); color:#8a6300; }
+html.dark-mode .badge.tier-affordable{ color:var(--warning); }
+.badge.tier-budget{ background:rgba(13,202,240,.16); color:#087990; }
+html.dark-mode .badge.tier-budget{ color:var(--info); }
+
+.dot{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+.yes{ color:var(--success); font-weight:700; }
+.no{ color:var(--text-secondary); }
+
+.swatch-row{ display:flex; gap:6px; margin-top:8px; }
+.swatch{ width:20px; height:20px; border-radius:5px; border:1px solid var(--border-color); }
+
+.studio-card{ overflow:hidden; }
+.studio-card h4{ margin:0 0 2px; font-size:1rem; }
+.studio-card .loc{ color:var(--text-secondary); font-size:.8rem; margin-bottom:10px; }
+.studio-card .usp{ font-size:.83rem; color:var(--text-secondary); margin-top:10px; }
+.tag-list{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.tag{ font-size:.7rem; padding:4px 10px; border-radius:6px; background:var(--bg-page); border:1px solid var(--border-color); color:var(--text-secondary); font-weight:600; }
+
+/* ---------- Charts (HTML/CSS bars) ---------- */
+.barchart{ display:flex; flex-direction:column; gap:11px; }
+.barchart .row{ display:grid; grid-template-columns:180px 1fr 90px; align-items:center; gap:6px; }
+.barchart .row .label{ font-size:.76rem; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.barchart .track{ background:var(--bg-page); border-radius:6px; height:14px; overflow:hidden; border:1px solid var(--border-color); }
+.barchart .fill{ height:100%; border-radius:6px 0 0 6px; transition:width .3s ease; }
+.barchart .val{ font-size:.78rem; font-variant-numeric:tabular-nums; color:var(--text-primary); text-align:right; font-weight:600; }
+
+.legend{ display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; font-size:.76rem; color:var(--text-secondary); }
+.legend .item{ display:flex; align-items:center; gap:6px; }
+
+.kpi-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+@media (max-width:960px){ .kpi-grid{ grid-template-columns:repeat(2,1fr);} }
+.kpi{ background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius); padding:18px 20px; }
+.kpi .kpi-label{ font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-secondary); font-weight:700; }
+.kpi .kpi-value{ font-size:1.7rem; font-weight:700; margin-top:6px; font-variant-numeric:tabular-nums; }
+.kpi .kpi-sub{ font-size:.76rem; color:var(--text-secondary); margin-top:2px; }
+
+.gap-card{ border-left:4px solid var(--danger); word-break:break-word; }
+.gap-card .roi{ float:right; font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; }
+.roi-high{ color:var(--success); font-weight:700; }
+.roi-medium{ color:#b8860b; font-weight:700; }
+html.dark-mode .roi-medium{ color:var(--warning); }
+
+.rec-card{ border-left:4px solid var(--accent-primary); word-break:break-word; }
+.terms-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; font-size:.84rem; }
+@media (max-width:760px){ .terms-grid{ grid-template-columns:1fr; } }
+.terms-grid dt{ font-weight:700; color:var(--text-secondary); margin-top:10px; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; }
+.terms-grid dd{ margin:3px 0 0; }
+
+details.studio-detail{ border:1px solid var(--border-color); border-radius:var(--radius); margin-bottom:14px; background:var(--bg-card); overflow:hidden; }
+details.studio-detail summary{
+  cursor:pointer; list-style:none; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;
+  font-weight:700; font-size:.95rem; background:var(--bg-page);
+}
+details.studio-detail summary::-webkit-details-marker{ display:none; }
+details.studio-detail summary .arrow{ transition:transform .15s; color:var(--text-secondary); }
+details.studio-detail[open] summary .arrow{ transform:rotate(90deg); }
+details.studio-detail .detail-body{ padding:18px 20px; }
+
+/* ---------- Pricing & Terms reference (Page 2) ---------- */
+.section-label{
+  font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-secondary);
+  font-weight:700; margin:0 0 10px;
+}
+.callout{
+  border-radius:8px; padding:12px 16px; font-size:.85rem; border:1px solid;
+}
+.callout strong{ display:block; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+.callout p{ margin:0; color:var(--text-secondary); }
+.callout-success{ background:rgba(25,135,84,.08); border-color:rgba(25,135,84,.35); }
+.callout-success strong{ color:var(--success); }
+.callout-danger{ background:rgba(220,53,69,.08); border-color:rgba(220,53,69,.35); }
+.callout-danger strong{ color:var(--danger); }
+.callout-warning{ background:rgba(255,193,7,.1); border-color:rgba(255,193,7,.4); }
+.callout-warning strong{ color:#8a6300; }
+html.dark-mode .callout-warning strong{ color:var(--warning); }
+
+dl.terms-grid dd.term-value{ font-weight:500; }
+dl.terms-grid dd.term-info{ color:var(--accent-primary); }
+dl.terms-grid dd.term-danger{ color:var(--danger); font-weight:600; }
+dl.terms-grid dd.term-warning{ color:#8a6300; font-weight:600; }
+html.dark-mode dl.terms-grid dd.term-warning{ color:var(--warning); }
+
+.policy-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px; font-size:.85rem; }
+.policy-list li{ padding:10px 14px; background:var(--bg-page); border:1px solid var(--border-color); border-radius:8px; }
+.policy-list strong{ margin-right:4px; }
+.tone-danger{ color:var(--danger); }
+.tone-warning{ color:#8a6300; }
+html.dark-mode .tone-warning{ color:var(--warning); }
+
+.included-box, .extra-box{
+  border-radius:var(--radius); padding:14px 16px; border:1px solid var(--border-color); background:var(--bg-card);
+}
+.included-box{ border-left:4px solid var(--success); }
+.extra-box{ border-left:4px solid var(--danger); }
+.included-box strong{ color:var(--success); font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; }
+.extra-box strong{ color:var(--danger); font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; }
+.included-box ul, .extra-box ul{ margin:10px 0 0; padding-left:18px; font-size:.83rem; color:var(--text-secondary); display:flex; flex-direction:column; gap:6px; }
+
+footer.app-footer{ text-align:center; padding:26px 20px 40px; color:var(--text-secondary); font-size:.76rem; }
+
+::-webkit-scrollbar{ height:8px; width:8px; }
+::-webkit-scrollbar-thumb{ background:var(--border-color); border-radius:4px; }
+
+/* ---------- Responsive sidebar ---------- */
+@media (max-width:900px){
+  .sidebar{ width:76px; flex-basis:76px; position:fixed; height:100vh; }
+  .sidebar .brand-text, .sidebar .label, .nav-section-label, .sidebar-footer-text{ display:none; }
+  .sidebar-brand{ justify-content:center; padding:20px 0 16px; }
+  .nav-item{ justify-content:center; padding:12px 0; }
+  .main-col{ margin-left:76px; }
+  .menu-btn{ display:flex; }
+  main.content{ padding:18px; }
+  .topbar{ padding:12px 16px; }
+  .sidebar.collapsed{ width:60px; flex-basis:60px; }
+  .sidebar.collapsed .sidebar-footer .collapse-btn{ padding:10px 0; }
+}
+@media (min-width:901px){
+  .sidebar.collapsed + .main-col{ max-width:calc(100vw - 60px); }
+}
+@media (max-width:600px){
+  .filters{ flex-direction:column; align-items:stretch; }
+  .kpi-grid{ grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ============================================================ SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="mark">B</div>
+      <div class="brand-text">
+        <strong>BOE Studios</strong>
+        <span>Market Intelligence</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav">
+      <div class="nav-section-label">Dashboards</div>
+      <button class="nav-item active" data-page="compare">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        </span>
+        <span class="label">Studio Comparison</span>
+      </button>
+      <button class="nav-item" data-page="terms">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+        </span>
+        <span class="label">Terms &amp; Policies</span>
+      </button>
+      <button class="nav-item" data-page="insights">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8 12 14.7 8.7 11.4 3 17"/></svg>
+        </span>
+        <span class="label">Insights &amp; Recommendations</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-text">Data compiled Jul 4, 2026<br>14 studio locations &middot; 21 decks reviewed</div>
+      <button class="collapse-btn nav-item" id="collapseBtn" title="Collapse sidebar" style="margin-top:8px;padding:11px 12px;justify-content:flex-start;">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+        <span class="label">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============================================================ MAIN COLUMN -->
+  <div class="main-col">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Toggle navigation">&#9776;</button>
+      <div class="page-title">
+        <h1 id="topbarTitle">Studio Comparison</h1>
+        <p id="topbarSubtitle">Mumbai rental studio market landscape</p>
+      </div>
+      <button class="theme-toggle" id="themeToggle">
+        <span class="knob" id="themeKnob">&#9728;</span>
+        <span id="themeLabel">Light mode</span>
+      </button>
+    </header>
+
+    <main class="content">
+
+      <!-- ============================================================ PAGE 1 -->
+      <section class="page active" id="page-compare">
+        <h1>Studio Comparison</h1>
+        <p class="subtitle">14 Mumbai studio locations (from 21 decks) benchmarked against BOE Studios' planned Andheri West location (36×38 ft / ~1,368 sq ft).</p>
+
+        <div class="filters">
+          <div class="filter-group">
+            <label>Location</label>
+            <select id="fLocation"></select>
+          </div>
+          <div class="filter-group">
+            <label>Market Segment</label>
+            <select id="fSegment">
+              <option value="all">All</option>
+              <option value="primary">Primary (direct competitor)</option>
+              <option value="secondary">Secondary (reference)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Max Full-Day Rate (₹): <span id="priceOut"></span></label>
+            <input type="range" id="fPrice" min="5000" max="45000" step="1000">
+          </div>
+          <div class="filter-group" style="flex:1;min-width:220px;">
+            <label>Activities</label>
+            <div class="multi-select" id="msActivities"><div class="ms-btn" tabindex="0"><span class="ms-label">All Activities</span><span class="ms-count" style="display:none">0</span><span class="ms-arrow">▾</span></div><div class="ms-dropdown"><input type="text" class="ms-search" placeholder="Search activities..."><div class="ms-options" id="msActivitiesOptions"></div></div></div>
+          </div>
+          <div class="filter-group" style="flex:1;min-width:220px;">
+            <label>Amenities</label>
+            <div class="multi-select" id="msAmenities"><div class="ms-btn" tabindex="0"><span class="ms-label">All Amenities</span><span class="ms-count" style="display:none">0</span><span class="ms-arrow">▾</span></div><div class="ms-dropdown"><input type="text" class="ms-search" placeholder="Search amenities..."><div class="ms-options" id="msAmenitiesOptions"></div></div></div>
+          </div>
+          <button class="btn" id="resetFilters">Reset filters</button>
+        </div>
+
+        <h2>Comparison Table</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Studio</th><th>Location</th><th>Segment</th><th>Size</th><th>Tier</th>
+                <th>Full Day (8h)</th><th>Full Day (12h)</th><th>Hourly (base)</th><th>Activities</th>
+              </tr>
+            </thead>
+            <tbody id="compareTbody"></tbody>
+          </table>
+        </div>
+
+        <h2>Rate Comparison Charts</h2>
+        <div class="grid cols-2" style="margin-bottom:16px">
+          <div class="card">
+            <h3>Hourly Base Rate</h3>
+            <div class="barchart" id="chartHourly"></div>
+          </div>
+          <div class="card">
+            <h3>2-Hour Session</h3>
+            <div class="barchart" id="chart2hr"></div>
+          </div>
+          <div class="card">
+            <h3>4-Hour (Half Day)</h3>
+            <div class="barchart" id="chart4hr"></div>
+          </div>
+          <div class="card">
+            <h3>8-Hour (Full Day)</h3>
+            <div class="barchart" id="chart8hr"></div>
+          </div>
+          <div class="card">
+            <h3>12-Hour (Extended)</h3>
+            <div class="barchart" id="chart12hr"></div>
+          </div>
+          <div class="card">
+            <h3>Effective ₹/hr by Duration</h3>
+            <div class="barchart" id="chartEffective"></div>
+          </div>
+        </div>
+
+        <h2>Features &amp; Amenities Matrix</h2>
+        <div class="table-wrap">
+          <table id="amenityMatrix"></table>
+        </div>
+
+        <h2>Design Aesthetics Showcase</h2>
+        <div class="grid cols-3" id="designShowcase"></div>
+      </section>
+
+      <!-- ============================================================ PAGE 2 -->
+      <section class="page" id="page-terms">
+        <h1>Detailed Terms &amp; Policies</h1>
+        <p class="subtitle">Complete pricing breakdowns, discounts, rules, penalties and equipment inclusions per studio, as disclosed in each studio's rate card / deck.</p>
+        <div id="termsContainer"></div>
+      </section>
+
+      <!-- ============================================================ PAGE 3 -->
+      <section class="page" id="page-insights">
+        <h1>Market Insights &amp; BOE Recommendations</h1>
+        <p class="subtitle">Synthesis of the 14-studio comparative analysis (from 21 competitor decks + web research) into actionable strategy for BOE Studios.</p>
+
+        <h2>Market Snapshot</h2>
+        <div class="kpi-grid cols-6" id="kpiGrid"></div>
+
+        <h2>Activity Trends — What's Offered Most</h2>
+        <div class="card"><div class="barchart" id="activityChart"></div></div>
+
+        <h2>Amenity Adoption — Most Common Features</h2>
+        <div class="card"><div class="barchart" id="amenityChart"></div></div>
+
+        <h2>Pricing Trends by Duration</h2>
+        <div class="card">
+          <div class="grid cols-2">
+            <div>
+              <h3>Hourly Rate Bands</h3>
+              <div class="barchart" id="hourlyBandChart"></div>
+            </div>
+            <div>
+              <h3>Full-Day Package Range by Tier</h3>
+              <div class="barchart" id="tierRangeChart"></div>
+            </div>
+          </div>
+        </div>
+
+        <h2>Design Trends Observed</h2>
+        <div class="grid cols-3" id="designTrends"></div>
+
+        <h2>Market Gaps Analysis</h2>
+        <div id="gapsContainer"></div>
+
+        <h2>Direct Recommendations for BOE Studios</h2>
+        <div class="grid cols-2" id="recsContainer"></div>
+
+        <h2>Space Configuration — 36×38 ft Recommendation</h2>
+        <div class="card">
+          <div class="grid cols-2">
+            <div>
+              <h3>Recommended Allocation (~1,368 sq ft)</h3>
+              <div class="barchart" id="spaceChart"></div>
+            </div>
+            <div>
+              <h3>Rationale</h3>
+              <p style="font-size:.86rem;color:var(--text-secondary)">Single large flexible main space with modular walls (Paxton's movable-wall approach) outperforms a multi-small-room layout at this footprint. Prioritize equipment quality and wall modularity over subdividing into many themed rooms — 36×38 ft is below the threshold where heavy multi-room segmentation pays off. The industry trend toward multi-format studios (photo + video + podcast in one booking) makes a flexible main floor with an audio-treated corner the optimal configuration. Add an interchangeable accent wall panel system (4–6 color options, like Bottoms Up Studio's 6-wall palette) for visual variety without permanent renovation.</p>
+              <ul style="font-size:.84rem;color:var(--text-secondary)">
+                <li>Main shooting floor: 600–700 sq ft (non-negotiable)</li>
+                <li>Equipment / prop storage: 200+ sq ft</li>
+                <li>Makeup + changing room: 100+ sq ft</li>
+                <li>Pantry / break area: 100+ sq ft</li>
+                <li>Washrooms: 100+ sq ft</li>
+                <li>Optional: podcast booth <em>or</em> mirror wall (~50 sq ft) — pick one, not both</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <h2>Trend Insights</h2>
+        <div class="grid cols-2">
+          <div class="card">
+            <h3>Trending Up</h3>
+            <ul id="trendUp" style="font-size:.86rem;color:var(--text-secondary)"></ul>
+          </div>
+          <div class="card">
+            <h3>Flat / Declining / Absent</h3>
+            <ul id="trendDown" style="font-size:.86rem;color:var(--text-secondary)"></ul>
+          </div>
+        </div>
+
+        <h2>Financial Benchmarking</h2>
+        <div class="grid cols-2">
+          <div class="card">
+            <h3>Average Daily Rate by Tier</h3>
+            <div class="table-wrap">
+              <table id="benchmarkTable"></table>
+            </div>
+          </div>
+          <div class="card">
+            <h3>BOE Revenue Potential (Illustrative)</h3>
+            <div class="table-wrap">
+              <table id="revenueTable"></table>
+            </div>
+            <p style="font-size:.76rem;color:var(--text-secondary);margin-top:10px">Illustrative only — assumes occupancy inputs are validated against real booking data before use in financial modeling.</p>
+          </div>
+        </div>
+
+        <h2>Summary Verdict</h2>
+        <div class="card" style="border-left:4px solid var(--success)">
+          <p style="font-size:.9rem"><strong>Position BOE as a premium-accessible, multi-format content studio</strong> filling the ₹15,000–₹24,000/day sweet spot between budget and premium tiers. Photography/video are the core anchor (12 of 14 studios). Podcast is the fastest-growing gap (6 of 14 offer it — India podcast market at 27.1% CAGR). Include a dedicated audio-treated podcast corner, interchangeable accent wall panels, and modular walls enabling photo→video→podcast pivots in a single booking. Add a "Quick-Shoot" hourly slot (₹1,500–₹2,000/hr) inspired by the Click OK/Sugarcane model to capture spontaneous social content demand. Avoid yoga/fitness/dance as headline activities (zero market validation across 14 studios). India's creator economy at $15B (2026) provides the macro tailwind — execute on format flexibility, transparent pricing, and equipment depth.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="app-footer">
+      BOE Studios Market Intelligence Dashboard &middot; Data compiled July 4, 2026 from 14 studio locations / 21 competitor decks &middot; For internal strategic use.
+    </footer>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   DATA — edit here to refresh the whole dashboard
+   ================================================================ */
+/* Studios with partial data have "Not disclosed" where unavailable.
+   Studios: Paxton Grand Stage, Paxton Stage 2, Seer AW, Seer GW,
+   Spotlight, Bohemian Arcade A/B/C, Aarambh Sets, Arterra Studio,
+   Astral Studios, Click OK Studio, Studio Slate, Sugarcane Films,
+   The Dance Temple, The Palette Studio, Bottoms Up Studio */
+const STUDIO_DATA = [
+  {
+    id:'paxton', name:'Paxton Studios — The Grand Stage', location:'Andheri East',
+    segment:'primary', size:'2,000 sq ft', tier:'Premium',
+    positioning:'Premium',
+    activities:['Photography','Video Production','Corporate Events','Food & Lifestyle Shoots','Product Shoots'],
+    amenities:['Equipment Provided','Air Conditioning','WiFi','Changing Rooms','Parking','Waiting Lounge','Paper Backdrops'],
+    pricing:[
+      {duration:'1 Hour', rate:3500}, {duration:'4 Hours', rate:14000}, {duration:'6 Hours', rate:20000},
+      {duration:'8 Hours', rate:26000}, {duration:'10 Hours', rate:32000}, {duration:'12 Hours', rate:36000}
+    ],
+    day8:26000, day12:36000, hourlyBase:3500,
+    colors:['#e8ddc7','#cbb994','#3a3a3a'],
+    vibe:'Modern, minimalist luxury with professional studio atmosphere',
+    usp:'Multiple movable walls for custom setups; professional-grade lighting equipment included; themed rooms for versatile shoots.',
+    terms:{
+      pricing:[
+        '1 Hour — ₹3,500 (incl. power & equipment)',
+        '4 Hours — ₹14,000 (₹3,500/hr)',
+        '6 Hours — ₹20,000 (₹3,333/hr)',
+        '8 Hours — ₹26,000 (₹3,250/hr)',
+        '10 Hours — ₹32,000 (₹3,200/hr)',
+        '12 Hours — ₹36,000 (₹3,000/hr)'
+      ],
+      discounts:'Effective per-hour rate decreases with longer bookings (₹3,500/hr at 1hr down to ₹3,000/hr at 12hr) — a built-in volume discount.',
+      policies:'Not disclosed in source deck beyond rate card.',
+      penalties:'Not disclosed.',
+      equipment:'3× Elinchrome FRX 600, 3× Amaran 300c RGB video lights, modifiers (octabox, softbox, beauty dish, strip box, snoot, boomstand, barndoor, reflector).',
+      inclusions:'Power, equipment, makeup/changing area, 2 washrooms, pantry (microwave, refrigerator, water purifier), multiple parking slots, waiting lounge.'
+    },
+    full:{
+      pricingTable:[
+        {duration:'1 Hour', rate:'₹3,500', note:'₹3,500/hr'},
+        {duration:'4 Hours', rate:'₹14,000', note:'₹3,500/hr'},
+        {duration:'6 Hours', rate:'₹20,000', note:'₹3,333/hr'},
+        {duration:'8 Hours', rate:'₹26,000', note:'₹3,250/hr'},
+        {duration:'10 Hours', rate:'₹32,000', note:'₹3,200/hr'},
+        {duration:'12 Hours', rate:'₹36,000', note:'₹3,000/hr'},
+      ],
+      specialRates:'No podcast, corporate, group, or bulk-booking discount rates are mentioned anywhere in the source deck.',
+      additionalCharges:[
+        {item:'Electricity', rate:'₹25/unit', note:'Metered separately, billed in addition to rental'},
+        {item:'Studio Boy (×2, mandatory)', rate:'₹1,000–₹2,000', note:'Per booking, mandatory for wall movement/assistance'},
+        {item:'GST', rate:'18%', note:'Additional on total rental amount'},
+        {item:'Overage (beyond booked slot)', rate:'Pro-rata', note:'Charged per the applicable hourly slab'},
+      ],
+      conditions:{
+        advance:'100% (full amount) required to confirm booking',
+        confirmation:'Booking confirmed only on receipt of 100% advance',
+        cancellation:'Not disclosed — no cancellation window specified',
+        refund:'No refund on cancellation (explicitly stated)',
+        noShow:'Not disclosed',
+        reschedule:'Not disclosed',
+        gracePeriod:'10 minutes',
+        lateFees:'Full next hour charged in entirety once the 10-minute grace period is exceeded',
+        minBooking:'1 hour'
+      },
+      policies:{
+        damage:'Any nail hole or wall damage (even a single hole) requires repainting of the entire affected wall at client’s cost',
+        equipmentLiability:'Not itemized beyond the wall-damage clause',
+        crewSize:'35–40 people maximum',
+        operatingHours:'Not stated in source deck',
+        parking:'1 dedicated on-site spot for the primary booker; additional crew parking ~100m away',
+        access:'1st floor, no lift — stairs only',
+        noiseSmoking:'Not disclosed'
+      },
+      included:['Studio space for booked duration','3 movable walls (door/window/plain finish, 12×10 ft each)','Full lighting package (3× Elinchrom FRX 600, 3× Amaran 300c RGB, modifiers)','Themed spaces: Kitchen, Living Room, Bedroom, Dining Room, Office','Makeup/changing area','2 washrooms','1 parking spot for primary booker'],
+      extra:['Electricity (₹25/unit consumed)','Studio Boy fee (₹1,000–₹2,000, ×2 mandatory)','Overage beyond booked hours (pro-rata)','18% GST','Wall/prop damage (full repainting cost)','Additional crew parking (~100m away, not on-site)']
+    }
+  },
+  {
+    id:'seer-aw', name:'Seer Studios — Andheri West', location:'Andheri West',
+    segment:'primary', size:'575 sq ft', tier:'Mid-Premium',
+    positioning:'Mid-Premium',
+    activities:['Photography','Video Production','Corporate Events','Content Shoots'],
+    amenities:['Equipment Provided','Changing Rooms','Paper Backdrops','Studio Staff Included'],
+    pricing:[
+      {duration:'Up to 3 Hours', rate:5400}, {duration:'Up to 6 Hours', rate:9600},
+      {duration:'8 Hours (Full Day)', rate:12000}, {duration:'10 Hours (Full Day)', rate:15000},
+      {duration:'12 Hours (Full Day)', rate:17000}
+    ],
+    day8:12000, day12:17000, hourlyBase:1800,
+    colors:['#c1502e','#8fae4f','#f2ede1'],
+    vibe:'Contemporary, vibrant, creative',
+    usp:'Mandatory studio assistant ensures professionalism; vibrant colored walls (Terracotta Orange, Lime Green, Ivory) for distinctive looks; dining table for lifestyle shoots.',
+    terms:{
+      pricing:[
+        'Up to 3 hours — ₹1,800/hr flat',
+        'Up to 6 hours — ₹1,600/hr flat',
+        'Full Day 8 hrs — ₹12,000',
+        'Full Day 10 hrs — ₹15,000',
+        'Full Day 12 hrs — ₹17,000',
+        'Overage beyond booked slab — ₹1,500/hr',
+        'Extra backdrop colour beyond included 3 — ₹1,000/shade'
+      ],
+      discounts:'Flat hourly rate drops from ₹1,800/hr (≤3hr) to ₹1,600/hr (≤6hr); day-rate slabs reduce effective ₹/hr further at 8–12 hr bookings.',
+      policies:'Studio assistant is mandatory and included in every booking (adds a fixed service layer to all shoot sizes).',
+      penalties:'Overage charged at ₹1,500/hr once the booked slab (6/8/12 hr) is exceeded.',
+      equipment:'Elinchrom ELC 500, Elinchrom Master RX, 4× Elinchrom FRX 400, 2× Nanlite FS 300Bi, Godox SZ 200Bi, Nanlite Mix Wand 18, Godox/Elinchrom modifiers, boom arms.',
+      inclusions:'3 colour paper backdrop changes included (15 colours available, 9×36 ft rolls), makeup room with curtains (seats 2), solid pine dining table (seats 6), mandatory studio assistant.'
+    },
+    full:{
+      pricingTable:[
+        {duration:'Up to 3 Hours', rate:'₹1,800/hr', note:'Flat rate'},
+        {duration:'Up to 6 Hours', rate:'₹1,600/hr', note:'Flat rate'},
+        {duration:'Full Day 8 hrs', rate:'₹12,000', note:''},
+        {duration:'Full Day 10 hrs', rate:'₹15,000', note:''},
+        {duration:'Full Day 12 hrs', rate:'₹17,000', note:''},
+      ],
+      specialRates:'No podcast, corporate, or bulk/group discount rates are mentioned in this deck.',
+      additionalCharges:[
+        {item:'Overage (beyond 6/8/12 hr slab)', rate:'₹1,500/hr', note:''},
+        {item:'Extra backdrop shade', rate:'₹1,000/shade', note:'Beyond the 3 free colour changes included'},
+        {item:'GST', rate:'18%', note:'Additional on total'},
+      ],
+      conditions:{
+        advance:'50% required to confirm booking',
+        confirmation:'Booking confirmed on receipt of 50% advance',
+        cancellation:'Advance forfeited if cancelled within 5 days of the scheduled shoot',
+        refund:'Non-refundable advance if cancelled within the 5-day window',
+        noShow:'Not disclosed',
+        reschedule:'Not disclosed',
+        gracePeriod:'Not disclosed',
+        lateFees:'Not disclosed',
+        minBooking:'Not disclosed'
+      },
+      policies:{
+        damage:'Not disclosed',
+        equipmentLiability:'Not disclosed',
+        crewSize:'Not disclosed',
+        operatingHours:'Not disclosed',
+        parking:'Not disclosed',
+        access:'Not disclosed',
+        noiseSmoking:'Not disclosed'
+      },
+      included:['Studio assistant present for full booking duration (mandatory)','Complementary Philips iron','Complementary IKEA RIGGA rack','Indoor slippers','Full lighting equipment package','3 free backdrop colour changes','Dining table (solid pine, seats 6)'],
+      extra:['Backdrop colour change beyond the 3 included (₹1,000/shade)','Overage beyond booked slab (₹1,500/hr)','18% GST']
+    }
+  },
+  {
+    id:'seer-gw', name:'Seer Studios — Goregaon West', location:'Goregaon West',
+    segment:'secondary', size:'960 sq ft', tier:'Mid-Premium',
+    positioning:'Mid-Premium (higher tier)',
+    activities:['Photography','Video Production','Content Shoots','Lifestyle Shoots'],
+    amenities:['Equipment Provided','WiFi','Natural Light','Fully Functional Kitchen','Paper Backdrops'],
+    pricing:[
+      {duration:'Up to 3 Hours', rate:6900}, {duration:'Up to 6 Hours', rate:12600},
+      {duration:'8 Hours (Full Day)', rate:16000}, {duration:'10 Hours (Full Day)', rate:19000},
+      {duration:'12 Hours (Full Day)', rate:22000}
+    ],
+    day8:16000, day12:22000, hourlyBase:2300,
+    colors:['#e8e1d0','#7a8471','#2f2f2f'],
+    vibe:'Natural-light, warm, editorial kitchen-and-lifestyle feel',
+    usp:'Fully functional kitchen for food/lifestyle shoots; natural south-facing window; larger space; designer set pieces; pedestals.',
+    terms:{
+      pricing:[
+        'Up to 3 hours — ₹2,300/hr flat',
+        'Up to 6 hours — ₹2,100/hr flat',
+        'Full Day 8 hrs — ₹16,000',
+        'Full Day 10 hrs — ₹19,000',
+        'Full Day 12 hrs — ₹22,000',
+        'Overage — ₹2,000/hr'
+      ],
+      discounts:'Same slab-discount structure as sister property (Andheri West), priced roughly 25–30% higher reflecting larger space and natural light.',
+      policies:'Not disclosed beyond rate card.',
+      penalties:'Overage charged at ₹2,000/hr once booked slab is exceeded.',
+      equipment:'Elinchrom ELC 500, Elinchrom Master RX, 4× Elinchrom FRX 400, 3× Nanlite FS 300 Bi, Amaran 300C RGBWW.',
+      inclusions:'South-facing window (18×11 ft) with blackout & sheer curtains, fully functional kitchen (island, induction cooktop, fridge, mixer grinder, microwave, toaster), 11 colour paper backdrops (9×36 ft), Sabyasachi designer set, pedestals.'
+    },
+    full:{
+      pricingTable:[
+        {duration:'Up to 3 Hours', rate:'₹2,300/hr', note:'Flat rate'},
+        {duration:'Up to 6 Hours', rate:'₹2,100/hr', note:'Flat rate'},
+        {duration:'Full Day 8 hrs', rate:'₹16,000', note:''},
+        {duration:'Full Day 10 hrs', rate:'₹19,000', note:''},
+        {duration:'Full Day 12 hrs', rate:'₹22,000', note:''},
+      ],
+      specialRates:'No podcast, corporate, or bulk/group discount rates are mentioned in this deck.',
+      additionalCharges:[
+        {item:'Overage (beyond 6/8/12 hr slab)', rate:'₹2,000/hr', note:''},
+        {item:'GST', rate:'18%', note:'Additional on total'},
+      ],
+      conditions:{
+        advance:'Not explicitly restated in this deck',
+        confirmation:'Not explicitly restated in this deck',
+        cancellation:'Presumed same as sister property (Andheri West: forfeit within 5 days) — NOT explicitly printed in this deck',
+        refund:'Presumed same as Andheri West — NOT explicitly printed in this deck',
+        noShow:'Not disclosed',
+        reschedule:'Not disclosed',
+        gracePeriod:'Not disclosed',
+        lateFees:'Not disclosed',
+        minBooking:'Not disclosed'
+      },
+      policies:{
+        damage:'Not disclosed',
+        equipmentLiability:'Not disclosed',
+        crewSize:'Not disclosed',
+        operatingHours:'Not disclosed',
+        parking:'Not disclosed',
+        access:'Not disclosed',
+        noiseSmoking:'Not disclosed'
+      },
+      included:['Complementary Philips iron','Complementary IKEA Turbo rack','Full lighting equipment package','Fully functional self-service kitchen (induction, fridge, microwave, grinder/toaster)','Sabyasachi designer wallpaper set (14×10 ft)','Pedestals'],
+      extra:['Overage beyond booked slab (₹2,000/hr)','18% GST']
+    }
+  },
+  {
+    id:'spotlight', name:'Spotlight Studio', location:'Borivali West',
+    segment:'primary', size:'Not disclosed', tier:'Affordable-Premium',
+    positioning:'Budget-Premium',
+    activities:['Photography','Video Production','Podcast/Audio Recording'],
+    amenities:['Equipment Provided','Air Conditioning','WiFi','Fully Functional Kitchen','Paper Backdrops'],
+    pricing:[
+      {duration:'2 Hours', rate:3500}, {duration:'4 Hours', rate:5500}, {duration:'6 Hours', rate:8000},
+      {duration:'8 Hours', rate:10000}, {duration:'12 Hours', rate:14000}
+    ],
+    day8:10000, day12:14000, hourlyBase:1750,
+    colors:['#d8c9a3','#ffffff','#e8c04c'],
+    vibe:'Warm, homely, multi-set (talk show / podcast / living room)',
+    usp:'Multiple themed rooms (living room, kitchen, talk show set, podcast set, bedroom); affordable pricing; dedicated podcast rate; teleprompter available.',
+    terms:{
+      pricing:[
+        '2 Hours — ₹3,500 (full payment upfront)',
+        '4 Hours — ₹5,500 (full payment upfront)',
+        '6 Hours — ₹8,000 (50% advance, balance on day)',
+        '8 Hours — ₹10,000',
+        '12 Hours — ₹14,000',
+        'Podcast special rate — ₹2,499/hr (podcasters & dancers)'
+      ],
+      discounts:'Special discounted hourly rate (₹2,499/hr) specifically for podcasters and dancers — niche demand targeting.',
+      policies:'2-hour minimum booking enforced. Short bookings (2–4 hr) require full payment upfront; longer bookings (6 hr+) allow 50% advance with balance due on shoot day.',
+      penalties:'Not disclosed.',
+      equipment:'3× Nanlite FS-300B Bi, 2× Nanlite Pavo RGB Tubes, 2× Godox FL 150, RODE PodMics, Zoom H6 recorder, Feelworld teleprompter.',
+      inclusions:'Themed sets: Living Room, Kitchen, Talk Show Set, Podcast Set, Bedroom. Fully functional pantry (coffee machine, fridge, microwave). 3 paper backdrop colours (Beige, White, Chrome Yellow).'
+    },
+    full:{
+      pricingTable:[
+        {duration:'2 Hours', rate:'₹3,500', note:'Full payment on booking'},
+        {duration:'4 Hours', rate:'₹5,500', note:'Full payment on booking'},
+        {duration:'6 Hours', rate:'₹8,000', note:'50% advance + balance on shoot day'},
+        {duration:'8 Hours', rate:'₹10,000', note:'50% advance + balance on shoot day'},
+        {duration:'10 Hours', rate:'₹12,000', note:'50% advance + balance on shoot day'},
+        {duration:'12 Hours', rate:'₹14,000', note:'50% advance + balance on shoot day'},
+      ],
+      specialRates:'Fixed pricing — explicitly stated "FIXED COSTS NO BARGAIN." No podcast-specific, corporate, or group discount rate; podcast bookings use the same duration tiers via the "Open Talk" set.',
+      additionalCharges:[
+        {item:'Overage (beyond booked package)', rate:'₹1,500/hr', note:''},
+        {item:'Assistant overage (beyond 12 hrs)', rate:'₹200/hr', note:''},
+        {item:'Teleprompter (Feelworld TP16 + 13" iPad)', rate:'₹2,500', note:'Extra, on top of package'},
+        {item:'Full prop/crockery/linen wardrobe access', rate:'₹5,000', note:'Separate charge'},
+        {item:'Safety deposit', rate:'₹3,000', note:'Refundable; mandatory for all packages'},
+        {item:'GST', rate:'18%', note:'Additional on total'},
+      ],
+      conditions:{
+        advance:'2 & 4-hr packages: 100% at booking. 6–12 hr packages: 50% advance + balance on shoot day',
+        confirmation:'Confirmed on receipt of advance + ₹3,000 refundable safety deposit',
+        cancellation:'Advance forfeited if cancelled within 5 days of the shoot',
+        refund:'"NO REFUND AND RESCHEDULE POLICY" stated explicitly in the deck',
+        noShow:'Covered under the no-refund/no-reschedule policy',
+        reschedule:'Not permitted — explicitly stated in deck',
+        gracePeriod:'30 minutes before/after the booked slot',
+        lateFees:'Full additional hour charged once the 30-minute grace period is exceeded',
+        minBooking:'2 hours (compulsory)'
+      },
+      policies:{
+        damage:'Recovered from the ₹3,000 refundable safety deposit first; full wall restoration (Royal Colour shade card match) required if repainting is necessary',
+        equipmentLiability:'Studio not liable for accidents, injuries, or personal belongings',
+        crewSize:'10–15 people maximum, including artists/talent',
+        operatingHours:'Not stated in source deck',
+        parking:'None on-site — client’s own responsibility',
+        access:'2nd floor of a bungalow, no luggage lift',
+        noiseSmoking:'No smoking inside or outside the premises; no controversial-topic shoots; no paint, flour, or powder use'
+      },
+      included:['Studio assistant at every tier','3 paper backdrops (White/Beige/Chrome Yellow, 9×36 ft)','3 cloth backdrops (White/Black/Chroma Green, 9×12 ft)','Full lighting/audio equipment package','Makeup/changing area with 5ft & 6ft mirrors','Philips steam iron & clothing rack','Pantry appliances (gas stove, fridge, microwave, water purifier, coffee machine, mixer/grinder)','Bluetooth speaker, 100mbps WiFi'],
+      extra:['Teleprompter (₹2,500)','Full prop/crockery/linen wardrobe access (₹5,000)','Overage beyond booked package (₹1,500/hr)','Assistant time beyond 12 hrs (₹200/hr)','Food for the assistant on 6–12 hr bookings (client must arrange)','Damage (deducted from ₹3,000 safety deposit or billed beyond it)']
+    }
+  },
+  /* ---- Studio 5: Paxton Studios — Andheri East / Stage 2 ---- */
+  {
+    id:'paxton-stage2', name:'Paxton Studios — Andheri East', location:'Andheri East',
+    segment:'secondary', size:'720 sq ft', tier:'Premium',
+    positioning:'Premium (accessible tier)',
+    activities:['Photography','Video Production','Podcast/Audio Recording','Content Shoots','Influencer Campaigns'],
+    amenities:['Equipment Provided','Air Conditioning','WiFi','Changing Rooms','Parking','Paper Backdrops','Balcony','Natural Light'],
+    pricing:[
+      {duration:'1 Hour', rate:2500}, {duration:'4 Hours', rate:9000}, {duration:'6 Hours', rate:12000},
+      {duration:'8 Hours', rate:16000}, {duration:'10 Hours', rate:18000}, {duration:'12 Hours', rate:21000}
+    ],
+    day8:16000, day12:21000, hourlyBase:2500,
+    colors:['#8b7355','#d4c5a9','#2c2c2c'],
+    vibe:'Versatile multi-wall creative studio with natural light and balcony',
+    usp:'8 creative walls (Arc, Vintage Brick, Sky Light, Italian, etc.); podcast setup; natural light + balcony; 60 sq ft balcony; backed by Paxton Equipments gear rental.',
+    terms:{
+      pricing:[
+        '1 Hour — ₹2,500 | 4 Hours — ₹9,000 | 6 Hours — ₹12,000',
+        '8 Hours — ₹16,000 | 10 Hours — ₹18,000 | 12 Hours — ₹21,000',
+        'Studio Boy: ₹500 (up to 6 hrs) / ₹1,000 (up to 12 hrs) — mandatory',
+        'Electricity: ₹25/unit (meter reading before shoot)'
+      ],
+      discounts:'Influencer packages start at ₹2,000; Podcast packages start at ₹3,500 — exclusive bundled rates.',
+      policies:'48-page dedicated PDF deck with full terms. No refunds, no rescheduling once confirmed. 10-min grace period.',
+      penalties:'Overage pro-rata at booked slab rate. Full wall repainting for any nail hole/damage.',
+      equipment:'3× Elinchrome FRX 600, 3× Amaran 300c RGB. Paid extras: Aputure Nova P300c, Godox AD 600, Sony FX3/A7s3/Canon R6 II, Godox mics, smoke machine.',
+      inclusions:'Paper + cloth backdrops, high-speed WiFi, speakers, 1 parking slot, 3-phase power, ceiling rods, clothes rack, steam iron.'
+    },
+    full:{
+      pricingTable:[
+        {duration:'1 Hour', rate:'₹2,500', note:''},
+        {duration:'4 Hours', rate:'₹9,000', note:''},
+        {duration:'6 Hours', rate:'₹12,000', note:''},
+        {duration:'8 Hours', rate:'₹16,000', note:''},
+        {duration:'10 Hours', rate:'₹18,000', note:''},
+        {duration:'12 Hours', rate:'₹21,000', note:''},
+      ],
+      specialRates:'Influencer packages from ₹2,000; Podcast packages from ₹3,500 (contact for custom rates).',
+      additionalCharges:[
+        {item:'Electricity', rate:'₹25/unit', note:'Meter reading before shoot'},
+        {item:'Studio Boy (mandatory)', rate:'₹500–₹1,000', note:'₹500 up to 6hr, ₹1,000 up to 12hr'},
+        {item:'GST', rate:'18%', note:'Additional on total'},
+        {item:'Overage', rate:'Pro-rata', note:'At booked slab rate'},
+      ],
+      conditions:{
+        advance:'100% advance to lock booking',
+        confirmation:'Confirmed on receipt of 100% advance',
+        cancellation:'No refunds if cancelled or date altered',
+        refund:'None — explicitly stated',
+        noShow:'Not disclosed (presumed no refund)',
+        reschedule:'Not permitted — time slot cannot be altered',
+        gracePeriod:'10 minutes',
+        lateFees:'Full additional hour charged beyond grace period',
+        minBooking:'1 hour'
+      },
+      policies:{
+        damage:'Any nail hole requires full wall repainting; property damage must be compensated',
+        equipmentLiability:'Paxton Equipments backs gear; paid extras available',
+        crewSize:'12–15 people maximum',
+        operatingHours:'Not stated in deck',
+        parking:'1 slot for primary booker; additional on request',
+        access:'1st floor, no lift — fewer stairs',
+        noiseSmoking:'Not disclosed'
+      },
+      included:['Studio space for booked duration','8 creative wall setups (Arc, Brick, Sky Light, Italian, Dual Tone, etc.)','Movable walls (2 sides)','Living Room, Bedroom, Podcast setups','Make-up/changing room','2 washrooms','Pantry (microwave, refrigerator, water purifier)','Balcony (60 sq ft)','Paper + cloth backdrops','Speakers, high-speed WiFi','1 parking slot','3-phase power, ceiling rods','Clothes rack, steam iron'],
+      extra:['Electricity (₹25/unit)','Studio Boy fee (₹500–₹1,000 mandatory)','Overage (pro-rata at slab rate)','18% GST','Wall damage repainting','Premium equipment rentals (Sony, Canon, Aputure)']
+    }
+  },
+  /* ---- Studio 6: Bohemian Arcade Studios A/B/C ---- */
+  {
+    id:'bohemian-a', name:'Bohemian Arcade — Studio A', location:'Goregaon East',
+    segment:'secondary', size:'~760 sq ft', tier:'Affordable-Premium',
+    positioning:'Entry-level budget',
+    activities:['Photography','Video Production','Content Shoots','Digital Ads','Films','Short Films','Music Videos'],
+    amenities:['Equipment Provided','Air Conditioning','WiFi','Changing Rooms','Parking','Multiple Themed Sets','Studio Staff Included'],
+    pricing:[
+      {duration:'1 Hour', rate:2999}, {duration:'4 Hours', rate:7999}, {duration:'8 Hours', rate:13999}, {duration:'12 Hours', rate:17999}
+    ],
+    day8:13999, day12:17999, hourlyBase:2999,
+    colors:['#e8ddd3','#c4a882','#5c4033'],
+    vibe:'Versatile multi-set studio with mobile walls',
+    usp:'13+ themed sets across 3 studios; mobile walls on wheels; tiered pricing (A=entry, B=mid, C=premium); podcast & dancer rate ₹2,499/hr.',
+    terms:{
+      pricing:['Studio A: 1hr ₹2,999 / 4hr ₹7,999 / 8hr ₹13,999 / 12hr ₹17,999','Studio B: 1hr ₹3,999 / 4hr ₹13,999 / 8hr ₹23,999 / 12hr ₹29,999','Studio C: 4hr ₹20,000 / 8hr ₹36,000 / 12hr ₹48,000 / 16hr ₹56,000'],
+      discounts:'Podcast & dancer rate: ₹2,499/hr flat (Studio B). Bulk booking discounts available on request.',
+      policies:'50% advance; 5-day cancellation forfeiture; rental time = declared call time to last person exits.',
+      penalties:'Prop/property damage starts at ₹1,000/item. Overage: A=₹1,500/hr, B=₹2,500/hr, C=₹3,500/hr.',
+      equipment:'Studio A: 4× Godox DPIII 600, 4× Elinchrom RX, 4× Godox 60SLW video lights, modifiers. B/C: no lighting list itemized.',
+      inclusions:'Power, staff, full set/prop inventory for booked studio. Clean bathrooms (men+women), ample parking.'
+    },
+    full:{
+      pricingTable:[
+        {duration:'Studio A — 1 Hour', rate:'₹2,999', note:'Incl. power & staff'},
+        {duration:'Studio A — 4 Hours', rate:'₹7,999', note:''},
+        {duration:'Studio A — 8 Hours', rate:'₹13,999', note:''},
+        {duration:'Studio A — 12 Hours', rate:'₹17,999', note:''},
+        {duration:'Studio B — 1 Hour', rate:'₹3,999', note:'Incl. power & staff'},
+        {duration:'Studio B — 8 Hours', rate:'₹23,999', note:''},
+        {duration:'Studio B — 12 Hours', rate:'₹29,999', note:''},
+        {duration:'Studio C — 8 Hours', rate:'₹36,000', note:'Premium tier'},
+        {duration:'Studio C — 12 Hours', rate:'₹48,000', note:''},
+      ],
+      specialRates:'Studio B: Podcast & dancers ₹2,499/hr flat. Bulk bookings: contact manager.',
+      additionalCharges:[
+        {item:'Overage Studio A', rate:'₹1,500/hr', note:''},
+        {item:'Overage Studio B', rate:'₹2,500/hr', note:''},
+        {item:'Overage Studio C', rate:'₹3,500/hr', note:''},
+        {item:'Prop damage (A/B)', rate:'₹1,000+/item', note:'Increases with "level of chaos"'},
+        {item:'GST', rate:'18%', note:'On total'},
+      ],
+      conditions:{
+        advance:'50% required',
+        confirmation:'Confirmed on 50% advance',
+        cancellation:'Advance forfeited within 5 days of shoot',
+        refund:'Non-refundable advance within 5-day window',
+        noShow:'No refund',
+        reschedule:'Not explicitly stated',
+        gracePeriod:'Not stated (rental = call time to last exit)',
+        lateFees:'Overage rates apply',
+        minBooking:'1 hour'
+      },
+      policies:{
+        damage:'Client fully responsible; props start at ₹1,000/item; no nails in walls',
+        equipmentLiability:'Studio not liable for accidents/injuries',
+        crewSize:'Not stated per studio',
+        operatingHours:'Not specified in decks',
+        parking:'Ample on-site parking',
+        access:'1st floor, metro/train/highway access',
+        noiseSmoking:'No smoking indoors; no glitter/colors/powders/confetti'
+      },
+      included:['Power consumption','Studio staff','Full set/prop inventory for studio booked','Mobile walls on wheels','Separate men/women bathrooms','Kitchen, Cafe/Bar, Podcast, Library, Living Room, Bedroom, Bathroom, Dance, ICU, Elevator, Reception sets (varies by studio)'],
+      extra:['Overage per hour (varies by studio)','Prop damage charges','18% GST','Wall hanging (needs manager approval)']
+    }
+  },
+  /* ---- Studio 7: Arterra Studio ---- */
+  {
+    id:'arterra', name:'Arterra Studio', location:'Bandra West',
+    segment:'secondary', size:'600 sq ft', tier:'Premium',
+    positioning:'Premium-Accessible',
+    activities:['Photography','Videography','Content Creation','Podcast Recordings','E-commerce Shoots','Media Interviews','Talk Shows','Personal Meetings'],
+    amenities:['Equipment Provided','LED Screen','Air Conditioning','WiFi','Changing Rooms','Pantry','CCTV Security','Bluetooth Speakers'],
+    pricing:[
+      {duration:'2 Hours', rate:9000}, {duration:'4 Hours (Half Day)', rate:18000}, {duration:'6 Hours', rate:24000},
+      {duration:'8 Hours (Full Day)', rate:30000}, {duration:'12 Hours (Extended)', rate:38000}
+    ],
+    day8:30000, day12:38000, hourlyBase:4500,
+    colors:['#c4c9b0','#f5f0e8','#8b7d6b'],
+    vibe:'Contemporary premium, photographer-focused, refined minimalism',
+    usp:'Prime Linking Road location in Bandra; 8×6 ft LED screen (₹2,000/hr add-on); premium hospitality; 24/7 CCTV.',
+    terms:{
+      pricing:[
+        '2 Hours — ₹9,000 (minimum booking)',
+        '4 Hours (Half Day) — ₹18,000 (introductory)',
+        '6 Hours — ₹24,000 (introductory)',
+        '8 Hours (Full Day) — ₹30,000 (introductory)',
+        '12 Hours (Extended) — ₹38,000 (introductory)',
+        'Overtime — ₹4,500/hr (subject to availability)',
+        'Overnight storage — ₹3,500/night'
+      ],
+      discounts:'Introductory rates for first 3 months of operation.',
+      policies:'100% advance required; minimum 2-hour booking; 18% GST applicable.',
+      penalties:'Overtime at ₹4,500/hr; overnight storage at ₹3,500/night.',
+      equipment:'LED smart lights (4 in 1), professional lighting setup, Marshall portable Bluetooth speakers, 8×6 ft LED screen (extra).',
+      inclusions:'Open flexible space, black & white seamless backdrops, makeup/changing area, premium coffee machine pantry, modern washroom, 3-seater sofa, armchair, coffee table.'
+    },
+    full:{
+      pricingTable:[
+        {duration:'2 Hours', rate:'₹9,000', note:'Minimum booking'},
+        {duration:'4 Hours (Half Day)', rate:'₹18,000', note:'Introductory'},
+        {duration:'6 Hours', rate:'₹24,000', note:'Introductory'},
+        {duration:'8 Hours (Full Day)', rate:'₹30,000', note:'Introductory'},
+        {duration:'12 Hours (Extended)', rate:'₹38,000', note:'Introductory'},
+      ],
+      specialRates:'Introductory pricing (first 3 months). No corporate/podcast/bulk discount rates published.',
+      additionalCharges:[
+        {item:'Overtime', rate:'₹4,500/hr', note:'Subject to availability'},
+        {item:'Overnight storage', rate:'₹3,500/night', note:''},
+        {item:'LED screen (8×6 ft)', rate:'₹2,000/hr', note:'Optional add-on'},
+        {item:'GST', rate:'18%', note:'On total'},
+      ],
+      conditions:{
+        advance:'100% advance required',
+        confirmation:'Confirmed on receipt of full payment',
+        cancellation:'Not explicitly detailed in deck',
+        refund:'Not explicitly detailed in deck',
+        noShow:'Not disclosed',
+        reschedule:'Not disclosed',
+        gracePeriod:'Not disclosed',
+        lateFees:'Overtime ₹4,500/hr',
+        minBooking:'2 hours'
+      },
+      policies:{
+        damage:'Not explicitly detailed',
+        equipmentLiability:'Not disclosed',
+        crewSize:'Not disclosed',
+        operatingHours:'Not disclosed',
+        parking:'Not disclosed (premium Linking Road location)',
+        access:'1st floor accessible location',
+        noiseSmoking:'Not disclosed'
+      },
+      included:['600 sq ft open flexible space','Black & white seamless backdrops','Makeup & changing suite','Premium coffee machine pantry','Modern washroom','Furniture (sofa, armchair, coffee table, bar stools)','24/7 CCTV surveillance','100 Mbps fiber optic WiFi'],
+      extra:['LED screen (₹2,000/hr)','Overtime (₹4,500/hr)','Overnight storage (₹3,500/night)','18% GST']
+    }
+  },
+  /* ---- Studio 8: Click OK Studio ---- */
+  {
+    id:'clickok', name:'Click OK Studio', location:'Mumbai (Western Suburbs)',
+    segment:'secondary', size:'Multiple rooms', tier:'Budget-Friendly',
+    positioning:'Budget-Premium',
+    activities:['Photography','Video Production','Podcast/Audio Recording','Content Creation','Commercial Product Shoots','Social Media Content'],
+    amenities:['Equipment Provided','Air Conditioning','WiFi','Multiple Backdrops','Natural Light','Podcast Setup'],
+    pricing:[
+      {duration:'1 Hour (Commercial Room Mon-Thu)', rate:799}, {duration:'1 Hour (Creator Room Mon-Thu)', rate:699},
+      {duration:'1 Hour (Commercial Room Fri-Sun)', rate:999}, {duration:'1 Hour (Creator Room Fri-Sun)', rate:799}
+    ],
+    day8:6392, day12:9588, hourlyBase:699,
+    colors:['#e8ddd3','#b8a9c9','#f5efe6'],
+    vibe:'Modern minimalist with cozy contemporary options',
+    usp:'Dual-room concept (Commercial + Creator) with distinct aesthetics; lowest hourly rate in market (₹699/hr); weekend premium pricing model.',
+    terms:{
+      pricing:[
+        'Commercial Room: Mon-Thu ₹799/hr, Fri-Sun ₹999/hr',
+        'Creator Room: Mon-Thu ₹699/hr, Fri-Sun ₹799/hr',
+        'Weekend premium pricing applies'
+      ],
+      discounts:'Lower weekday rates; no published bulk/podcast discount.',
+      policies:'Hourly rental model; flexible booking.',
+      penalties:'Not disclosed in deck.',
+      equipment:'Professional LED lighting, textured backdrop wall (Commercial), soft lighting + plants (Creator), podcast-friendly acoustic setup.',
+      inclusions:'AC, WiFi, multiple backdrop options, flexible room configurations.'
+    },
+    full:{
+      pricingTable:[
+        {duration:'Commercial Room (Mon-Thu)', rate:'₹799/hr', note:''},
+        {duration:'Commercial Room (Fri-Sun)', rate:'₹999/hr', note:''},
+        {duration:'Creator Room (Mon-Thu)', rate:'₹699/hr', note:''},
+        {duration:'Creator Room (Fri-Sun)', rate:'₹799/hr', note:''},
+      ],
+      specialRates:'No podcast/corporate/bulk rates published.',
+      additionalCharges:[
+        {item:'Weekend premium', rate:'+₹100–200/hr', note:'Fri-Sun rates apply'},
+        {item:'GST', rate:'18%', note:'If applicable'},
+      ],
+      conditions:{
+        advance:'Not explicitly stated',
+        confirmation:'Not explicitly stated',
+        cancellation:'Not explicitly stated',
+        refund:'Not explicitly stated',
+        noShow:'Not disclosed',
+        reschedule:'Not disclosed',
+        gracePeriod:'Not disclosed',
+        lateFees:'Not disclosed',
+        minBooking:'1 hour'
+      },
+      policies:{
+        damage:'Not disclosed',
+        equipmentLiability:'Not disclosed',
+        crewSize:'Not disclosed',
+        operatingHours:'Not disclosed',
+        parking:'Not disclosed',
+        access:'Mumbai western suburbs',
+        noiseSmoking:'Not disclosed'
+      },
+      included:['Room for booked duration','Professional LED lighting','AC','WiFi','Multiple backdrop options','Flexible configurations'],
+      extra:['Weekend premium rates','18% GST']
+    }
+  },
+  /* ---- Studio 9: Sugarcane Films & Studios ---- */
+  {
+    id:'sugarcane', name:'Sugarcane Films & Studios', location:'Wadala/Sion',
+    segment:'secondary', size:'400 sq ft', tier:'Budget-Friendly',
+    positioning:'Budget (full-service powerhouse)',
+    activities:['Photography','Videography','Content Creation','Production Services','Podcast Recording','Commercial Shoots'],
+    amenities:['Equipment Provided','WiFi','Natural Light','Paper Backdrops','Makeup Room','Bluetooth Speaker','Steam Iron','Parking'],
+    pricing:[
+      {duration:'1 Hour', rate:999}, {duration:'2 Hours', rate:1999}, {duration:'4 Hours', rate:3999},
+      {duration:'6 Hours', rate:5999}, {duration:'8 Hours', rate:7999}, {duration:'10 Hours', rate:9999}
+    ],
+    day8:7999, day12:11999, hourlyBase:999,
+    colors:['#f5e6c8','#f0d060','#8b4513'],
+    vibe:'Creative powerhouse, energetic, Instagram-worthy',
+    usp:'Full-service production (concept to final cut); lowest per-hour rate in market (₹999/hr promo); Royal Frame, Podcast, Sofa, Green wall setups.',
+    terms:{
+      pricing:[
+        'Per Hour: ₹999 (promo) / ₹1,100 regular',
+        '2 Hours — ₹1,999 | 4 Hours — ₹3,999',
+        '6 Hours — ₹5,999 | 8 Hours — ₹7,999 | 10 Hours — ₹9,999',
+        'Overage: ₹1,000/hr post agreed hours',
+        'Minimum booking: 2 hours'
+      ],
+      discounts:'Promotional ₹999/hr rate (limited period). No podcast/corporate/bulk rate published.',
+      policies:'Full payment to confirm. No cancellation/refund once confirmed. 15-20 min buffer for pack-up.',
+      penalties:'Overage ₹1,000/hr. No refunds. Policy violation = cancellation without refund.',
+      equipment:'2× Godox LCR 500, 2× Digitek 250W Bi-Color, 2× Godox 80cm Softbox, 4× Light stands.',
+      inclusions:'High-speed WiFi, Bluetooth speaker, steam iron, multiple paper backgrounds, props, makeup room, natural light window.'
+    },
+    full:{
+      pricingTable:[
+        {duration:'Promo Per Hour', rate:'₹999/hr', note:'Limited period (reg. ₹1,100)'},
+        {duration:'2 Hours', rate:'₹1,999', note:''},
+        {duration:'4 Hours', rate:'₹3,999', note:''},
+        {duration:'6 Hours', rate:'₹5,999', note:''},
+        {duration:'8 Hours', rate:'₹7,999', note:''},
+        {duration:'10 Hours', rate:'₹9,999', note:''},
+      ],
+      specialRates:'No published discount rates.',
+      additionalCharges:[
+        {item:'Overage', rate:'₹1,000/hr', note:'Post agreed hours'},
+        {item:'Equipment assistant', rate:'Chargeable', note:'Requires prior notice'},
+        {item:'GST', rate:'18%', note:'Additional on total'},
+      ],
+      conditions:{
+        advance:'Full payment to confirm',
+        confirmation:'Confirmed on full payment',
+        cancellation:'No cancellation or refund once confirmed',
+        refund:'None',
+        noShow:'Covered under no-refund policy',
+        reschedule:'Not permitted',
+        gracePeriod:'15–20 min buffer for pack-up',
+        lateFees:'If next client booked, charged as additional hour beyond buffer',
+        minBooking:'2 hours'
+      },
+      policies:{
+        damage:'Client fully responsible for all damages during booking',
+        equipmentLiability:'Lighting assistance excluded; equipment assistant chargeable',
+        crewSize:'Not specified',
+        operatingHours:'Not specified',
+        parking:'Available subject to availability (open parking)',
+        access:'3rd floor, lift operates Mon-Sat 8am-7:30pm',
+        noiseSmoking:'No smoking/alcohol/drugs; no cooking; only packed food allowed'
+      },
+      included:['Studio space for booked duration','2× Godox LCR 500 + 2× Digitek 250W','2× Godox 80cm Softbox + 4× Light stands','High-speed WiFi, Bluetooth speaker, steam iron','Multiple paper backgrounds + props','Makeup room with changing area','Natural light window','Neat washrooms'],
+      extra:['Overage (₹1,000/hr)','Equipment assistant (chargeable)','18% GST','Parking (subject to availability)']
+    }
+  },
+  /* ---- Studio 10: The Dance Temple ---- */
+  {
+    id:'dancetemple', name:'The Dance Temple', location:'Goregaon West',
+    segment:'secondary', size:'Flexible', tier:'Budget-Friendly',
+    positioning:'Budget-Friendly with Premium Options',
+    activities:['Dance Classes','Music Video Shoots','Content Creation','Photography','Video Production','Performance Recording'],
+    amenities:['LED Soft Lights','PAR Lights','DCL 150 Lights','Multiple Backdrops','Multiple Studio Spaces'],
+    pricing:[
+      {duration:'Studio 1 (1hr, 2 backdrops)', rate:1000}, {duration:'Sunrays Backdrop (1hr)', rate:900},
+      {duration:'Village House (1hr)', rate:900}, {duration:'Sunrays w/ DCL 150 (1hr)', rate:1400}
+    ],
+    day8:7200, day12:10800, hourlyBase:900,
+    colors:['#1a1a1a','#ffd700','#8b4513'],
+    vibe:'Energetic, dance-focused, performance-ready, theatrical',
+    usp:'Only dedicated dance-content studio in market; dual studio spaces; Sunrays and Village House backdrops; DCL 150 premium lighting.',
+    terms:{
+      pricing:[
+        'Studio 1 (1hr): 2 backdrops ₹1,000 / 3 backdrops ₹1,500',
+        'Studio 2 (1hr): 2 backdrops ₹900',
+        'Sunrays Backdrop (LED+PAR): 1hr ₹900 / 3hr ₹2,700',
+        'Sunrays w/ DCL 150 + PAR: 1hr ₹1,400 / 3hr ₹4,200',
+        'Night charges (post 11 PM): +₹100/hr'
+      ],
+      discounts:'No published bulk/podcast discount.',
+      policies:'100% advance to confirm. Setup happens during booking time. Rates fixed, no bargaining.',
+      penalties:'Additional services: blower ₹150/hr, external help ₹300/hr, iPhone shoot ₹900/hr, DSLR 4K (min 2hr) ₹2,000.',
+      equipment:'LED soft lights, PAR lights, DCL 150 lights (premium option).',
+      inclusions:'Backdrops included in rate, LED soft lights + PAR lights included in Sunrays/Village House setups.'
+    },
+    full:{
+      pricingTable:[
+        {duration:'Studio 1 (1hr, 2 backdrops)', rate:'₹1,000', note:''},
+        {duration:'Studio 1 (1hr, 3 backdrops)', rate:'₹1,500', note:'No custom backdrops'},
+        {duration:'Studio 2 (1hr, 2 backdrops)', rate:'₹900', note:''},
+        {duration:'Sunrays (LED+PAR, 1hr)', rate:'₹900', note:''},
+        {duration:'Sunrays w/ DCL 150 (1hr)', rate:'₹1,400', note:'Premium lighting'},
+        {duration:'Village House (1hr)', rate:'₹900', note:''},
+        {duration:'Village House w/ DCL 150 (1hr)', rate:'₹1,400', note:''},
+      ],
+      specialRates:'Night shoots (post 11 PM): +₹100/hr. No other discounts.',
+      additionalCharges:[
+        {item:'Night charges', rate:'₹100/hr', note:'Post 11 PM'},
+        {item:'Blower', rate:'₹150/hr', note:''},
+        {item:'External help', rate:'₹300/hr', note:''},
+        {item:'iPhone shoot', rate:'₹900/hr', note:''},
+        {item:'DSLR 4K (min 2hr)', rate:'₹2,000', note:'+₹2,000/hr additional'},
+      ],
+      conditions:{
+        advance:'100% advance to confirm',
+        confirmation:'Booking confirmed on full payment',
+        cancellation:'Not explicitly stated',
+        refund:'Not explicitly stated',
+        noShow:'Not disclosed',
+        reschedule:'Not disclosed',
+        gracePeriod:'Not disclosed',
+        lateFees:'Half-hour extra rates apply',
+        minBooking:'1 hour'
+      },
+      policies:{
+        damage:'Not explicitly stated',
+        equipmentLiability:'Not explicitly stated',
+        crewSize:'Not disclosed',
+        operatingHours:'Night shoots available (+₹100/hr post 11PM)',
+        parking:'Not disclosed',
+        access:'1st floor, opposite Best Bus Stop, Motilal Nagar',
+        noiseSmoking:'Not disclosed'
+      },
+      included:['Backdrops as per package','LED soft lights + PAR lights (Sunrays/Village House)','Multiple studio spaces','Setup charges included'],
+      extra:['Night charges (+₹100/hr post 11PM)','Blower (₹150/hr)','External help (₹300/hr)','iPhone shoot (₹900/hr)','DSLR 4K video (₹2,000 min 2hr)']
+    }
+  },
+  /* ---- Studio 11: Bottoms Up Studio ---- */
+  {
+    id:'bottomsup', name:'Bottoms Up Studio', location:'Malad West',
+    segment:'secondary', size:'Not disclosed', tier:'Affordable-Premium',
+    positioning:'Premium Podcast & Content Studio',
+    activities:['Podcast Recording','Instagram Reels','YouTube Interviews','Coaching/Personal Branding','Brand Shoots','Talk Shows'],
+    amenities:['Equipment Provided','Sound Treatment','Multiple Wall Colors','Premium Chairs','Teleprompter'],
+    pricing:[
+      {duration:'2 Hours', rate:3000}, {duration:'4 Hours', rate:6000},
+      {duration:'8 Hours', rate:12000}, {duration:'12 Hours', rate:18000}
+    ],
+    day8:12000, day12:18000, hourlyBase:1500,
+    colors:['#c0392b','#f1c40f','#2c3e50','#ecf0f1','#7d8a3a','#2980b9'],
+    vibe:'Premium, clean, creator-focused with curated color backdrops',
+    usp:'Purpose-built podcast & content studio; 6 interchangeable wall colors (Red, Yellow, White, Neutral, Olive, Blue); a la carte equipment rental.',
+    terms:{
+      pricing:[
+        'Starter Shoot: 2hr — ₹3,000',
+        'Creator Pack (Most Popular): 4hr — ₹6,000',
+        'Pro Shoot Day: 8hr — ₹12,000',
+        'Full Production Day: 12hr — ₹18,000',
+        'Equipment rental available separately (see full breakdown)'
+      ],
+      discounts:'No published bulk/podcast discount (already podcast-focused).',
+      policies:'50% advance; minimum 2 hours; overtime billed per hour; 18% GST if invoice needed.',
+      penalties:'Damage to equipment/furniture chargeable.',
+      equipment:'Godox Litemons LE300Bi, Digitek LED lights, Aputure AL-MC, Shure MV7+ mic, Rode Wireless GO II, Sony FX30 camera, Podtrack Pod4Next.',
+      inclusions:'Sound-treated walls, 6 wall color options, premium chairs/decor, light stands included with lighting rentals.'
+    },
+    full:{
+      pricingTable:[
+        {duration:'Starter Shoot (2hr)', rate:'₹3,000', note:'Ideal for episodes/reels'},
+        {duration:'Creator Pack (4hr)', rate:'₹6,000', note:'Most Popular'},
+        {duration:'Pro Shoot Day (8hr)', rate:'₹12,000', note:'Best for brands'},
+        {duration:'Full Production Day (12hr)', rate:'₹18,000', note:''},
+      ],
+      specialRates:'Equipment add-ons priced per unit (see additional charges). No bundled podcast rate (already podcast-optimized).',
+      additionalCharges:[
+        {item:'Godox Litemons LE300Bi', rate:'₹500/light', note:'Bi-Color LED'},
+        {item:'Shure MV7+ Microphone', rate:'₹800/unit', note:'Professional podcast mic'},
+        {item:'Rode Wireless GO II', rate:'₹300/unit', note:'Lavalier system'},
+        {item:'Sony FX30 Camera', rate:'₹1,500/unit', note:'With prime lenses'},
+        {item:'Neewer X12 Teleprompter', rate:'₹500/unit', note:''},
+        {item:'Podtrack Pod4Next', rate:'₹500/unit', note:'Recorder + mixer'},
+        {item:'GST', rate:'18%', note:'If invoice needed'},
+      ],
+      conditions:{
+        advance:'50% advance to confirm',
+        confirmation:'Confirmed on advance payment',
+        cancellation:'Not explicitly detailed',
+        refund:'Not explicitly detailed',
+        noShow:'Not disclosed',
+        reschedule:'Not disclosed',
+        gracePeriod:'Not disclosed',
+        lateFees:'Overtime billed per hourly rate',
+        minBooking:'2 hours'
+      },
+      policies:{
+        damage:'Damage to equipment or furniture chargeable',
+        equipmentLiability:'Outside equipment allowed with prior approval',
+        crewSize:'Not disclosed',
+        operatingHours:'Limited slots daily',
+        parking:'Not disclosed (Malad West, near Infinity Mall)',
+        access:'3rd floor, IJMIMA building, Opp. Infinity Mall',
+        noiseSmoking:'Maintain cleanliness; respect studio space'
+      },
+      included:['Studio space for booked duration','6 wall color options (Red, Yellow, White, Neutral, Olive, Blue)','Sound-treated walls','Premium chairs, stools, decor','Light stands (with lighting rentals)'],
+      extra:['Equipment rentals (lights, mics, cameras, teleprompter)','18% GST (if invoice needed)','Overtime per hourly rate']
+    }
+  },
+  /* ---- Studio 12: Aarambh Sets ---- */
+  {
+    id:'aarambh', name:'Aarambh Sets', location:'Mumbai',
+    segment:'secondary', size:'Not disclosed', tier:'Premium',
+    positioning:'Ultra-Premium Theatrical',
+    activities:['Photography','Video Production','Set Design','Commercial Shoots','Content Creation','Theatrical/Specialty Shoots'],
+    amenities:['Equipment Provided','Multiple Themed Sets','Premium Architectural Installations','Vanity/Styling Areas','Lounge Areas','Professional Lighting Systems'],
+    pricing:[],
+    day8:999999, day12:999999, hourlyBase:999999,
+    colors:['#d4af37','#f5e6cc','#c0392b'],
+    vibe:'Luxury theatrical, ornate elegance, high-end production design',
+    usp:'Elaborate ornamental set pieces with multiple distinct themed rooms; cyclorama-style walls; premium architectural installations for luxury productions.',
+    terms:{
+      pricing:['Not disclosed in brochure. Contact directly for rates.'],
+      discounts:'Not disclosed.',
+      policies:'Not disclosed.',
+      penalties:'Not disclosed.',
+      equipment:'Professional lighting rigs, cyclorama-style walls, ornate pillar installations.',
+      inclusions:'Multiple room setups (living room, vanity areas), premium aesthetic design.'
+    },
+    full:{
+      pricingTable:[{duration:'Not disclosed', rate:'—', note:'Contact for pricing'}],
+      specialRates:'Not disclosed.',
+      additionalCharges:[],
+      conditions:{advance:'Not disclosed', confirmation:'Not disclosed', cancellation:'Not disclosed', refund:'Not disclosed', noShow:'Not disclosed', reschedule:'Not disclosed', gracePeriod:'Not disclosed', lateFees:'Not disclosed', minBooking:'Not disclosed'},
+      policies:{damage:'Not disclosed', equipmentLiability:'Not disclosed', crewSize:'Not disclosed', operatingHours:'Not disclosed', parking:'Not disclosed', access:'Not disclosed', noiseSmoking:'Not disclosed'},
+      included:['Ornate architectural installations','Cyclorama-style walls','Professional lighting rigs','Multiple premium room setups','Vanity/styling areas','Lounge areas'],
+      extra:['Not disclosed']
+    }
+  },
+  /* ---- Studio 13: Astral Studios — Stellar & Zen ---- */
+  {
+    id:'astral', name:'Astral Studios — Stellar & Zen', location:'Mumbai',
+    segment:'secondary', size:'~1,000 sq ft', tier:'Premium',
+    positioning:'Premium dual-concept',
+    activities:['Photography','Videography','Podcast Recordings','Product Photography','Fashion Shoots','Content Creation','Video Interviews'],
+    amenities:['Equipment Provided','Air Conditioning','WiFi','Cyclorama Wall','Mirror Wall','Multiple Themed Sets','Changing Rooms'],
+    pricing:[],
+    day8:999999, day12:999999, hourlyBase:999999,
+    colors:['#f5f0eb','#d4e6b5','#9b59b6'],
+    vibe:'Warm theatrical (Stellar) + Modern minimalist (Zen)',
+    usp:'Dual-studio concept: Stellar (cyclorama, living, kitchen, bedroom, podcast) + Zen (full mirror wall, open hall, conference room). Adaptable to any content type.',
+    terms:{
+      pricing:['Not explicitly stated in available deck pages.'],
+      discounts:'Not disclosed.',
+      policies:'Not disclosed.',
+      penalties:'Not disclosed.',
+      equipment:'Professional lighting setups, cyclorama wall (14×14×13 ft), multiple backdrops.',
+      inclusions:'AC throughout, WiFi, flexible room configurations, vanity with professional lighting.'
+    },
+    full:{
+      pricingTable:[{duration:'Not disclosed', rate:'—', note:'Contact for pricing'}],
+      specialRates:'Not disclosed.',
+      additionalCharges:[],
+      conditions:{advance:'Not disclosed', confirmation:'Not disclosed', cancellation:'Not disclosed', refund:'Not disclosed', noShow:'Not disclosed', reschedule:'Not disclosed', gracePeriod:'Not disclosed', lateFees:'Not disclosed', minBooking:'Not disclosed'},
+      policies:{damage:'Not disclosed', equipmentLiability:'Not disclosed', crewSize:'Not disclosed', operatingHours:'Not disclosed', parking:'Not disclosed', access:'Not disclosed', noiseSmoking:'Not disclosed'},
+      included:['Stellar Studio: cyclorama wall (14×14×13 ft), living room, kitchen, bedroom, podcast area, 3-seater vanity','Zen Studio: full mirror wall, open hall, office cabin, conference room, vanity','AC throughout','WiFi connectivity','Flexible room configurations'],
+      extra:['Not disclosed']
+    }
+  },
+  /* ---- Studio 14: Studio Slate ---- */
+  {
+    id:'slate', name:'Studio Slate', location:'Khar West',
+    segment:'secondary', size:'1,084 sq ft', tier:'Premium',
+    positioning:'Premium creator-first ecosystem',
+    activities:['Photography','Commercial Production','Fashion Shoots','Content Creation','Video Production','Workshops','Media Production'],
+    amenities:['Equipment Provided','Air Conditioning','WiFi','Mirror Wall','Changing Rooms','Pantry','Daylight Windows','3-Phase Power'],
+    pricing:[],
+    day8:999999, day12:999999, hourlyBase:999999,
+    colors:['#faf8f5','#f5e6cc','#d4c5a9','#8b7d6b'],
+    vibe:'Luxury creative ecosystem, refined minimalism, photographer-centric',
+    usp:'1,084 sq ft open creative playground by 20-year industry pro Manita Singhania; 13 ft ceiling; 25+ ceiling hooks for rigging; 3-phase power; dual openable makeup suites.',
+    terms:{
+      pricing:['Not specified in available brochure pages. Contact for rates.'],
+      discounts:'Not disclosed.',
+      policies:'Not disclosed.',
+      penalties:'Not disclosed.',
+      equipment:'Professional lighting infrastructure, 25+ ceiling hooks, 40mm MS rods, 3-phase power, multiple wall sockets.',
+      inclusions:'Full-length mirror wall, satin & linen curtains, 2 private washrooms, pantry, storage, elevated platform (1 ft), high-speed WiFi.'
+    },
+    full:{
+      pricingTable:[{duration:'Not disclosed', rate:'—', note:'Contact for pricing'}],
+      specialRates:'Not disclosed.',
+      additionalCharges:[],
+      conditions:{advance:'Not disclosed', confirmation:'Not disclosed', cancellation:'Not disclosed', refund:'Not disclosed', noShow:'Not disclosed', reschedule:'Not disclosed', gracePeriod:'Not disclosed', lateFees:'Not disclosed', minBooking:'Not disclosed'},
+      policies:{damage:'Not disclosed', equipmentLiability:'Not disclosed', crewSize:'Not disclosed', operatingHours:'Not disclosed', parking:'Not disclosed', access:'1st floor, Linking Road, Khar West', noiseSmoking:'Not disclosed'},
+      included:['1,084 sq ft open convertible space','13 ft clear ceiling height','25+ ceiling hooks for rigging','40mm MS rods for hanging lights/props','3-phase power','Full-length mirror wall','2 makeup suites (7×10 ft, collapsible)','2 private washrooms','Pantry','Storage areas','Elevated platform','Daylight-friendly windows','High-speed WiFi'],
+      extra:['Not disclosed']
+    }
+  },
+  /* ---- Studio 15: The Palette Studio ---- */
+  {
+    id:'palette', name:'The Palette Studio', location:'Andheri West',
+    segment:'primary', size:'Not disclosed', tier:'Premium',
+    positioning:'Premium Multi-Aesthetic',
+    activities:['Photography','Videography','Content Creation','Commercial Shoots','Social Media Content','Music Videos','Fashion Photography'],
+    amenities:['Equipment Provided','Air Conditioning','WiFi','Multiple Themed Sets','Professional Lighting'],
+    pricing:[],
+    day8:999999, day12:999999, hourlyBase:999999,
+    colors:['#e67e22','#d4e6b5','#f5e6cc','#ecf0f1'],
+    vibe:'Multi-aesthetic luxury, warm and inviting, Instagram-ready',
+    usp:'4 distinct summer-themed sets: Living Room (orange/warm), Bedroom (sage green), Sand Island (earth tones), CYC Wall (minimalist). Professional color coordination in every set.',
+    terms:{
+      pricing:['Not specified in available brochure pages. Contact for rates.'],
+      discounts:'Not disclosed.',
+      policies:'Not disclosed.',
+      penalties:'Not disclosed.',
+      equipment:'Professional photography + videography lighting in each set, color-coordinated schemes.',
+      inclusions:'AC throughout, flexible room usage, multiple backdrop options, premium furnishings.'
+    },
+    full:{
+      pricingTable:[{duration:'Not disclosed', rate:'—', note:'Contact for pricing'}],
+      specialRates:'Not disclosed.',
+      additionalCharges:[],
+      conditions:{advance:'Not disclosed', confirmation:'Not disclosed', cancellation:'Not disclosed', refund:'Not disclosed', noShow:'Not disclosed', reschedule:'Not disclosed', gracePeriod:'Not disclosed', lateFees:'Not disclosed', minBooking:'Not disclosed'},
+      policies:{damage:'Not disclosed', equipmentLiability:'Not disclosed', crewSize:'Not disclosed', operatingHours:'Not disclosed', parking:'Not disclosed', access:'301-302 Woodrow Building, Veera Desai Road, Andheri West', noiseSmoking:'Not disclosed'},
+      included:['4 distinct themed sets (Living Room, Bedroom, Sand Island, CYC Wall)','Professional lighting in each set','Coordinated color schemes','Premium furnishings and decor','AC throughout','Flexible room usage'],
+      extra:['Not disclosed']
+    }
+  }
+];
+
+const ACTIVITY_FREQ = [
+  {name:'Photography', count:12},
+  {name:'Video Production', count:12},
+  {name:'Content Creation / Brand', count:10},
+  {name:'Podcast/Audio Recording', count:6},
+  {name:'Corporate Events', count:5},
+  {name:'Food & Lifestyle Shoots', count:4},
+  {name:'E-commerce / Product Shoots', count:3},
+  {name:'Dance/Movement Content', count:2},
+  {name:'Talk Shows / Interviews', count:3},
+  {name:'Music Video Production', count:2},
+  {name:'Yoga', count:0},
+  {name:'Fitness/Gym', count:0},
+];
+
+const AMENITY_FREQ = [
+  {name:'Professional Equipment Provided', pct:90},
+  {name:'WiFi/High-Speed Internet', pct:85},
+  {name:'Changing Rooms/Makeup Area', pct:75},
+  {name:'Air Conditioning', pct:65},
+  {name:'Paper Backdrops Available', pct:60},
+  {name:'Multiple Themed Rooms/Sets', pct:50},
+  {name:'Parking', pct:40},
+  {name:'Fully Functional Kitchen', pct:30},
+  {name:'Natural Lighting', pct:25},
+  {name:'Studio Staff/Assistant Included', pct:25},
+  {name:'Mirrors / Mirror Wall', pct:25},
+];
+
+const HOURLY_BANDS = [
+  {name:'Budget (Click OK / Sugarcane)', low:699, high:999},
+  {name:'Value (Spotlight / Dance Temple)', low:900, high:1750},
+  {name:'Mid-range (Seer AW / Bottoms Up)', low:1500, high:2300},
+  {name:'Premium (Paxton / Arterra)', low:2500, high:4500},
+];
+
+const TIER_RANGES = [
+  {name:'Budget-Friendly', low:7999, high:11999},
+  {name:'Affordable-Premium', low:10000, high:18000},
+  {name:'Mid-Premium', low:12000, high:22000},
+  {name:'Premium', low:16000, high:38000},
+];
+
+const SPACE_ALLOCATION = [
+  {name:'Main shooting floor', sqft:650},
+  {name:'Equipment/prop storage', sqft:220},
+  {name:'Makeup + changing room', sqft:120},
+  {name:'Pantry/break area', sqft:110},
+  {name:'Washrooms', sqft:110},
+  {name:'Podcast booth OR mirror wall', sqft:50},
+  {name:'Circulation/reception', sqft:108},
+];
+
+const GAPS = [
+  {title:'Activity Gap — Fitness/Wellness Missing', roi:'High', body:'Yoga, Pilates, fitness and martial arts are completely absent across all analyzed studios despite strong demand for fitness content creation (Instagram reels, YouTube fitness channels). The creator economy surge has not yet translated into fitness-specific studio infrastructure. BOE could carve out a yoga/fitness-friendly zone with mirrors, soundproofing and matting as a secondary use of the flexible floor.'},
+  {title:'Geographic Gap — South Mumbai / Navi Mumbai Underserved', roi:'Medium-High', body:'Studios cluster heavily in Andheri/Goregaon/Malad/Borivali. Bandra (1 studio — Arterra), Khar (1 — Studio Slate), Wadala (1 — Sugarcane) and Malad (1 — Bottoms Up) are emerging but sparse. South Mumbai, Powai, and Navi Mumbai have zero represented studios despite growing creator populations.'},
+  {title:'Price Gap — Premium-Accessible Segment', roi:'High', body:'Analysis across 14 studios shows distinct tiers: Budget (₹699–₹999/hr), Affordable (₹1,000–₹1,750/hr), Mid (₹1,800–₹3,000/hr) and Premium (₹3,000–₹4,500+/hr). The ₹2,000–₹2,800/hr / ₹15,000–₹20,000/day "sweet spot" between mid and premium is under-served for the quality level BOE can deliver.'},
+  {title:'Podcast Infrastructure Gap', roi:'Very High', body:'India podcast market projected to reach ₹9.90B by 2034 (CAGR 27.1%). Only 6 of 14 studios offer dedicated podcast setups. Mumbai podcasters are actively ditching home studios for professional spaces. Bottoms Up Studio (Malad) is the only pure-play podcast studio — validating strong but unmet demand. BOE can capture this with a dedicated audio-treated corner + podcast rate.'},
+  {title:'Multi-Format Studio Gap', roi:'Very High', body:'The lines between content formats are blurring — a single session now involves brand shoots + podcast + reels. Only 3 studios (Bohemian Arcade, Spotlight, Paxton Stage 2) support true multi-format workflows. A right-sized multi-activity flexible room (photo + video + podcast + occasional fitness) reduces customer friction and lifts daily revenue per booking.'},
+  {title:'Hourly Rental Model Gap', roi:'Medium', body:'Click OK Studio and Sugarcane Films prove there is demand for ultra-flexible hourly rentals (₹699–₹999/hr). Most established studios require minimum 2–4 hour blocks. BOE could offer a no-minimum "creator quick-shoot" slot at a competitive hourly rate to capture spontaneous reels/social content demand.'},
+];
+
+const RECOMMENDATIONS = [
+  {title:'Competitive Positioning', body:'Position BOE as a "premium-accessible" content creator studio — better equipped than Spotlight/Seer/Bottoms Up, more affordable than Paxton/Arterra. India\'s creator economy is valued at USD 15.03B (2026) heading to USD 61.87B by 2033. BOE should capture the wave by competing on format flexibility and equipment quality, not on price alone.'},
+  {title:'Pricing Strategy', body:'Target the underserved ₹15,000–₹20,000/day "sweet spot." Hourly rate ₹2,500–₹3,000/hr; 8-hr day ₹18,000–₹24,000; podcast special rate ₹2,499/hr to match market (Bohemian Arcade benchmark); quick-shoot "Reels package" ₹999–₹1,500/hr for 1-hr social content slots (Click OK model).'},
+  {title:'Space Configuration (36×38 ft)', body:'Single large flexible main space with modular/mobile walls (Paxton\'s movable-wall approach scales better at this footprint). Include a dedicated audio-treated corner for podcast recording (India podcast market growing at 27.1% CAGR). Keep connected but distinct makeup/storage/pantry zones.'},
+  {title:'Activity Mix', body:'Anchor on photography/video production (present in 12/14 studios). Add podcast recording as a fast-growing secondary offering (only 6 of 14 offer it today — major gap). Keep the floor flexible for occasional fitness/movement content. Consider a "no minimum" quick-shoot slot for reels/social content (validated by Click OK\'s ₹699/hr model).'},
+  {title:'Amenities Priority List', body:'Must-have: professional lighting (3+ fixtures), AC, makeup/changing area with mirrors, 100mbps+ WiFi, on-site staff. High-value add-ons: 10+ colour paper backdrops, functional kitchen corner, parking. Differentiators (rare): natural light window, mirror wall, audio-treated podcast corner, teleprompter, themed/colored wall panels.'},
+  {title:'Market Segment to Target', body:'Professional content creators aged 22–45 earning ₹50K+/month: photographers, lifestyle/food influencers, commercial producers, podcast creators (fastest-growing segment), corporate event planners, D2C brand teams. Mumbai has ~1,800 D2C-focused UGC creators alone. This segment is value-sensitive (quality/$, not absolute price) and books full days repeatedly.'},
+  {title:'Unique Selling Points to Leverage', body:'All-inclusive transparent pricing (equipment + power + staff — no hidden charges), interchangeable accent wall panels for visual variety, modular walls enabling photo→video→podcast same-day pivots, and optional "studio assistant included" tier that adds professional oversight (Seer/Spotlight model validation).'},
+  {title:'Location Advantage Analysis', body:'Andheri West has real estate value and sits in the densest creator ecosystem cluster. Direct competitors: Seer AW (575 sq ft, mid-premium), The Palette Studio (premium, themed). Differentiate through podcast capability, flexible hourly options, and equipment depth. Malad West (Bottoms Up) and Wadala (Sugarcane) are emerging low-cost alternatives at opposite ends of the city.'},
+];
+
+const KPIS = [
+  {label:'Studios Analyzed', value:'14', sub:'from 21 competitor PDF decks'},
+  {label:'Avg. Full-Day Rate (8hr)', value:'₹15,000', sub:'Range: ₹7,999–₹30,000 across tiers'},
+  {label:'India Creator Economy 2026', value:'$15B', sub:'Projected $61.87B by 2033'},
+  {label:'India Podcast Market CAGR', value:'27.1%', sub:'From $1.08B (2025) to $9.90B (2034)'},
+  {label:'Studios Offering Podcast', value:'6 / 14', sub:'42% — growing but still under-served'},
+  {label:'Activities With Zero Competition', value:'3', sub:'Yoga, Fitness, Music Lessons'},
+];
+
+/* ================================================================
+   RENDER HELPERS
+   ================================================================ */
+const SERIES = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)','var(--c7)','var(--c8)','var(--c9)','var(--c10)','var(--c11)'];
+const fmtINR = n => '₹' + Number(n).toLocaleString('en-IN');
+
+function tierBadgeClass(tier){
+  tier = tier.toLowerCase();
+  if(tier.includes('budget')) return 'tier-budget';
+  if(tier.includes('affordable')) return 'tier-affordable';
+  if(tier.includes('mid')) return 'tier-midpremium';
+  return 'tier-premium';
+}
+
+function renderBarChart(container, items, opts){
+  opts = opts || {};
+  const max = opts.max || Math.max(...items.map(i=>i.value));
+  const showAvg = opts.showAvg !== false;
+  const avg = showAvg ? (opts.avg !== undefined ? opts.avg : Math.round(items.reduce((s,i)=>s+i.value,0)/items.length)) : 0;
+  const avgPct = showAvg && max ? (avg/max)*100 : 0;
+  const avgFmt = opts.avgDisplay || fmtINR;
+  let html = items.map((item,idx)=>{
+    const pct = max ? Math.max(2, (item.value/max)*100) : 0;
+    const color = item.color || SERIES[idx % SERIES.length];
+    const isBelow = showAvg ? item.value < avg : false;
+    return `<div class="row" style="position:relative">
+      <div class="label">${item.name}</div>
+      <div class="track"><div class="fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="val" style="${isBelow ? 'color:var(--success)' : ''}">${item.display !== undefined ? item.display : item.value}</div>
+    </div>`;
+  }).join('');
+  if(showAvg){
+    html += `<div class="row" style="border-top:1px dashed var(--text-secondary);padding-top:6px;margin-top:2px">
+      <div class="label" style="font-weight:700;color:var(--text-secondary)">Average</div>
+      <div class="track" style="position:relative">
+        <div style="position:absolute;left:${avgPct}%;top:-4px;width:2px;height:16px;background:var(--accent-primary);transform:translateX(-1px);border-radius:2px;"></div>
+        <div style="position:absolute;left:0;top:4px;width:${avgPct}%;height:2px;background:var(--accent-primary);opacity:.5;border-radius:1px;"></div>
+      </div>
+      <div class="val" style="font-weight:700">${typeof avgFmt === 'function' ? avgFmt(avg) : avgFmt}</div>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+/* ---- Pricing helpers for duration-based charts ---- */
+function findRate(pricing, targets){
+  if(!pricing || !pricing.length) return null;
+  for(const t of targets){
+    const found = pricing.find(p => p.duration.toLowerCase().includes(t));
+    if(found) return found.rate;
+  }
+  for(const p of pricing){
+    for(const t of targets){
+      if(p.duration.toLowerCase().includes(t)) return p.rate;
+    }
+  }
+  return null;
+}
+function getRate(studio, targets){ return findRate(studio.pricing, targets); }
+function get2hr(studio){ return getRate(studio, ['2 hour','2 hr','2hr']) || (getRate(studio, ['1 hour','1 hr','1hr']) ? getRate(studio, ['1 hour','1 hr','1hr'])*2 : null); }
+function get4hr(studio){ return getRate(studio, ['4 hour','4 hr','4hr','half day']); }
+function get8hr(studio){ return getRate(studio, ['8 hour','8 hr','8hr','full day']); }
+function get12hr(studio){ return getRate(studio, ['12 hour','12 hr','12hr','extended']); }
+function getEffectiveRate(studio){
+  const rates = [];
+  [1,2,4,6,8,10,12].forEach(h => {
+    const r = findRate(studio.pricing, [h+' hour', h+' hr', 'up to '+h+' hour', h+'hr']);
+    if(r) rates.push({hrs:h, rate:Math.round(r/h)});
+  });
+  return rates;
+}
+
+/* ---------------- Page 1: Comparison ---------------- */
+function initMultiSelect(containerId, options, onChange){
+  const root = document.getElementById(containerId);
+  const btn = root.querySelector('.ms-btn');
+  const label = root.querySelector('.ms-label');
+  const count = root.querySelector('.ms-count');
+  const dropdown = root.querySelector('.ms-dropdown');
+  const search = root.querySelector('.ms-search');
+  const optContainer = root.querySelector('.ms-options');
+  const selected = new Set();
+
+  function renderOpts(filter){
+    const filtered = filter ? options.filter(o => o.toLowerCase().includes(filter.toLowerCase())) : options;
+    optContainer.innerHTML = filtered.length
+      ? filtered.map(o => `<label class="ms-option${selected.has(o)?'':' featured'}">
+          <input type="checkbox" value="${o}" ${selected.has(o)?'checked':''}>
+          <span class="ms-opt-label">${o}</span>
+        </label>`).join('')
+      : `<div class="ms-empty">No matches found</div>`;
+    optContainer.querySelectorAll('.ms-option input').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if(cb.checked) selected.add(cb.value); else selected.delete(cb.value);
+        updateUI(); onChange(Array.from(selected));
+      });
+    });
+  }
+
+  function updateUI(){
+    if(selected.size){
+      label.textContent = selected.size === 1 ? Array.from(selected)[0] : selected.size + ' selected';
+      count.style.display = 'inline'; count.textContent = selected.size;
+    } else {
+      label.textContent = 'All ' + (containerId === 'msActivities' ? 'Activities' : 'Amenities');
+      count.style.display = 'none';
+    }
+  }
+
+  function close(){ root.classList.remove('open'); }
+
+  renderOpts('');
+
+  btn.addEventListener('click', (e) => { e.stopPropagation(); root.classList.toggle('open'); if(root.classList.contains('open')){ search.value=''; renderOpts(''); search.focus(); } });
+  search.addEventListener('input', () => renderOpts(search.value));
+
+  /* Clear all button */
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'ms-clear'; clearBtn.textContent = 'Clear selection';
+  clearBtn.addEventListener('click', (e) => { e.stopPropagation(); selected.clear(); updateUI(); onChange([]); close(); });
+  dropdown.appendChild(clearBtn);
+
+  /* Close on click outside */
+  document.addEventListener('click', (e) => { if(!root.contains(e.target)) close(); });
+
+  /* Close on Escape */
+  root.addEventListener('keydown', (e) => { if(e.key==='Escape') close(); });
+
+  return { clear: () => { selected.clear(); updateUI(); onChange([]); }, getSelected: () => Array.from(selected) };
+}
+
+function populateFilterOptions(){
+  const locSel = document.getElementById('fLocation');
+  const locations = Array.from(new Set(STUDIO_DATA.map(s=>s.location)));
+  locSel.innerHTML = '<option value="all">All locations</option>' + locations.map(l=>`<option value="${l}">${l}</option>`).join('');
+
+  const allActivities = Array.from(new Set(STUDIO_DATA.flatMap(s=>s.activities))).sort();
+  const allAmenities = Array.from(new Set(STUDIO_DATA.flatMap(s=>s.amenities))).sort();
+
+  window._msActivities = initMultiSelect('msActivities', allActivities, () => renderCompareTable());
+  window._msAmenities = initMultiSelect('msAmenities', allAmenities, () => renderCompareTable());
+
+  const priceInput = document.getElementById('fPrice');
+  priceInput.value = 45000;
+  document.getElementById('priceOut').textContent = fmtINR(45000);
+}
+
+function applyFilters(){
+  const loc = document.getElementById('fLocation').value;
+  const seg = document.getElementById('fSegment').value;
+  const maxPrice = Number(document.getElementById('fPrice').value);
+  const activeActivities = window._msActivities ? window._msActivities.getSelected() : [];
+  const activeAmenities = window._msAmenities ? window._msAmenities.getSelected() : [];
+
+  return STUDIO_DATA.filter(s=>{
+    if(loc !== 'all' && s.location !== loc) return false;
+    if(seg !== 'all' && s.segment !== seg) return false;
+    if(s.day8 <= 999000 && s.day8 > maxPrice) return false;
+    if(activeActivities.length && !activeActivities.every(a=>s.activities.includes(a))) return false;
+    if(activeAmenities.length && !activeAmenities.every(a=>s.amenities.includes(a))) return false;
+    return true;
+  });
+}
+
+function renderCompareTable(){
+  const rows = applyFilters();
+  const tbody = document.getElementById('compareTbody');
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-secondary);padding:30px">No studios match the current filters.</td></tr>`;
+  } else {
+    const fmt = v => v >= 999000 ? 'N/A' : fmtINR(v);
+    tbody.innerHTML = rows.map(s=>`
+      <tr>
+        <td><strong>${s.name}</strong></td>
+        <td>${s.location}</td>
+        <td><span class="badge ${s.segment}">${s.segment === 'primary' ? 'Primary' : 'Secondary'}</span></td>
+        <td>${s.size}</td>
+        <td><span class="badge ${tierBadgeClass(s.tier)}">${s.tier}</span></td>
+        <td class="num">${fmt(s.day8)}</td>
+        <td class="num">${fmt(s.day12)}</td>
+        <td class="num">${s.hourlyBase >= 999000 ? 'N/A' : fmtINR(s.hourlyBase)+'/hr'}</td>
+        <td>${s.activities.slice(0,3).join(', ')}${s.activities.length>3 ? ' +'+(s.activities.length-3) : ''}</td>
+      </tr>`).join('');
+  }
+  renderPricingCharts(rows);
+  renderAmenityMatrix(rows);
+  renderDesignShowcase(rows);
+}
+
+function renderPricingCharts(rows){
+  const priced = rows.filter(s=>s.day8 < 999000);
+  const noData = '<p style="color:var(--text-secondary);font-size:.82rem">No pricing data for current filters.</p>';
+
+  function chartFor(id, label, getVal, valLabel){
+    const el = document.getElementById(id);
+    const vals = priced.map(s=>{
+      const v = getVal(s);
+      const n = s.name.split('—')[0].trim().split('(')[0].trim();
+      return v != null ? {name:n, value:v, display:fmtINR(v), color:SERIES[priced.indexOf(s)%SERIES.length]} : null;
+    }).filter(Boolean);
+    if(!vals.length){ el.innerHTML = noData; return; }
+    renderBarChart(el, vals);
+  }
+
+  chartFor('chartHourly', 'Hourly', s => s.hourlyBase < 999000 ? s.hourlyBase : getRate(s,['1 hour','1 hr','1hr']));
+  chartFor('chart2hr', '2-Hour', s => get2hr(s));
+  chartFor('chart4hr', '4-Hour', s => get4hr(s));
+  chartFor('chart8hr', '8-Hour', s => s.day8 < 999000 ? s.day8 : get8hr(s));
+  chartFor('chart12hr', '12-Hour', s => s.day12 < 999000 ? s.day12 : get12hr(s));
+
+  /* Effective ₹/hr chart — show how per-hour cost drops with longer bookings */
+  const effEl = document.getElementById('chartEffective');
+  const withEff = priced.map(s=>{
+    const eff = getEffectiveRate(s);
+    return eff.length >= 2 ? {name:s.name.split('—')[0].trim().split('(')[0].trim(), rates:eff, color:SERIES[priced.indexOf(s)%SERIES.length]} : null;
+  }).filter(Boolean);
+  if(!withEff.length){ effEl.innerHTML = noData; return; }
+  const labels = Array.from(new Set(withEff.flatMap(w=>w.rates.map(r=>r.hrs)))).sort((a,b)=>a-b);
+  const maxRate = Math.max(...withEff.flatMap(w=>w.rates.map(r=>r.rate)));
+  effEl.innerHTML = `<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;min-height:180px;padding:4px 0">` + withEff.map(w=>{
+    return `<div style="flex:1;min-width:120px">
+      <div style="font-size:.7rem;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${w.name}</div>
+      ${labels.map((h,i)=>{
+        const r = w.rates.find(x=>x.hrs===h);
+        const pct = r ? Math.max(3,(r.rate/maxRate)*100) : 0;
+        return `<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;font-size:.65rem">
+          <span style="width:14px;flex:0 0 auto;color:var(--text-secondary)">${h}h</span>
+          <div style="flex:1;height:10px;background:var(--bg-page);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${w.color};border-radius:4px;transition:width .3s"></div>
+          </div>
+          <span style="width:40px;text-align:right;font-weight:600">${r ? '₹'+r.rate : '—'}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('') + `</div>
+  <div class="legend"><div class="item"><span style="font-size:.72rem;color:var(--text-secondary)">Shorter bars = better value per hour. Each column shows ₹/hr dropping as duration increases.</span></div></div>`;
+}
+
+function renderAmenityMatrix(rows){
+  const table = document.getElementById('amenityMatrix');
+  const allAmenities = Array.from(new Set(STUDIO_DATA.flatMap(s=>s.amenities))).sort();
+  if(!rows.length){ table.innerHTML = ''; return; }
+  let html = '<thead><tr><th>Amenity</th>' + rows.map(s=>`<th>${s.name.split('—')[0].trim()}</th>`).join('') + '</tr></thead><tbody>';
+  allAmenities.forEach(a=>{
+    html += `<tr><td>${a}</td>` + rows.map(s=>`<td>${s.amenities.includes(a) ? '<span class="yes">&#10003; Yes</span>' : '<span class="no">&#8212;</span>'}</td>`).join('') + '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function renderDesignShowcase(rows){
+  const el = document.getElementById('designShowcase');
+  if(!rows.length){ el.innerHTML = ''; return; }
+  el.innerHTML = rows.map(s=>`
+    <div class="card studio-card">
+      <h4>${s.name}</h4>
+      <div class="loc">${s.location} &middot; ${s.size}</div>
+      <div style="font-size:.83rem;color:var(--text-secondary)">${s.vibe}</div>
+      <div class="swatch-row">${s.colors.map(c=>`<span class="swatch" style="background:${c}"></span>`).join('')}</div>
+      <div class="tag-list">${s.activities.map(a=>`<span class="tag">${a}</span>`).join('')}</div>
+      <div class="usp"><strong>USP:</strong> ${s.usp}</div>
+    </div>`).join('');
+}
+
+/* ---------------- Page 2: Terms (full pricing & policy reference) ---------------- */
+function condRow(label, value, tone){
+  const cls = tone ? ` term-${tone}` : '';
+  return `<dt>${label}</dt><dd class="term-value${cls}">${value}</dd>`;
+}
+
+function renderTerms(){
+  const container = document.getElementById('termsContainer');
+  container.innerHTML = STUDIO_DATA.map((s,i)=>{
+    const f = s.full;
+    return `
+    <details class="studio-detail" ${i===0?'open':''}>
+      <summary>
+        <span>${s.name} &middot; <span style="font-weight:400;color:var(--text-secondary)">${s.location}</span></span>
+        <span class="arrow">&#9656;</span>
+      </summary>
+      <div class="detail-body">
+
+        <h3 class="section-label">1. Pricing Breakdown</h3>
+        <div class="table-wrap" style="margin-bottom:16px">
+          <table>
+            <thead><tr><th>Duration</th><th>Rate</th><th>Notes</th></tr></thead>
+            <tbody>
+              ${f.pricingTable.map(p=>`<tr><td>${p.duration}</td><td class="num">${p.rate}</td><td>${p.note||'—'}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout-success" style="margin-bottom:16px">
+          <strong>Special Rates &amp; Discounts</strong>
+          <p>${f.specialRates}</p>
+        </div>
+
+        <h3 class="section-label">2. Additional &amp; Overage Charges</h3>
+        <div class="table-wrap" style="margin-bottom:20px">
+          <table>
+            <thead><tr><th>Item</th><th>Rate</th><th>Notes</th></tr></thead>
+            <tbody>
+              ${f.additionalCharges.map(c=>`<tr><td>${c.item}</td><td class="num" style="color:var(--danger);font-weight:700">${c.rate}</td><td>${c.note||'—'}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="section-label">3. Booking &amp; Cancellation Terms</h3>
+        <dl class="terms-grid" style="margin-bottom:20px">
+          ${condRow('Advance Payment', f.conditions.advance, 'info')}
+          ${condRow('Booking Confirmation', f.conditions.confirmation, 'info')}
+          ${condRow('Minimum Booking', f.conditions.minBooking, 'info')}
+          ${condRow('Cancellation Policy', f.conditions.cancellation, 'danger')}
+          ${condRow('Refund Policy', f.conditions.refund, 'danger')}
+          ${condRow('No-Show Policy', f.conditions.noShow, 'danger')}
+          ${condRow('Rescheduling Policy', f.conditions.reschedule, 'danger')}
+          ${condRow('Grace Period', f.conditions.gracePeriod, 'warning')}
+          ${condRow('Late Fees', f.conditions.lateFees, 'warning')}
+        </dl>
+
+        <h3 class="section-label">4. Policies &amp; Restrictions</h3>
+        <ul class="policy-list" style="margin-bottom:20px">
+          <li><strong>Damage policy:</strong> <span class="tone-danger">${f.policies.damage}</span></li>
+          <li><strong>Equipment liability:</strong> ${f.policies.equipmentLiability}</li>
+          <li><strong>Crew size limit:</strong> <span class="tone-warning">${f.policies.crewSize}</span></li>
+          <li><strong>Operating hours:</strong> ${f.policies.operatingHours}</li>
+          <li><strong>Parking:</strong> ${f.policies.parking}</li>
+          <li><strong>Access restrictions:</strong> <span class="tone-warning">${f.policies.access}</span></li>
+          <li><strong>Noise / smoking / conduct:</strong> <span class="tone-warning">${f.policies.noiseSmoking}</span></li>
+        </ul>
+
+        <h3 class="section-label">5. Included vs Extra</h3>
+        <div class="grid cols-2">
+          <div class="included-box">
+            <strong>Included in base price</strong>
+            <ul>${f.included.map(x=>`<li>${x}</li>`).join('')}</ul>
+          </div>
+          <div class="extra-box">
+            <strong>Costs Extra</strong>
+            <ul>${f.extra.map(x=>`<li>${x}</li>`).join('')}</ul>
+          </div>
+        </div>
+
+        <h3 class="section-label" style="margin-top:20px">Equipment Included</h3>
+        <p style="font-size:.85rem;color:var(--text-secondary);margin:0 0 12px">${s.terms.equipment}</p>
+
+      </div>
+    </details>
+  `;}).join('');
+}
+
+/* ---------------- Page 3: Insights ---------------- */
+function renderKpis(){
+  document.getElementById('kpiGrid').innerHTML = KPIS.map(k=>`
+    <div class="kpi">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+}
+
+function renderActivityChart(){
+  const maxCount = Math.max(...ACTIVITY_FREQ.map(a=>a.count), 1);
+  const items = ACTIVITY_FREQ.map((a,i)=>({name:a.name, value:a.count, display:a.count+' / 12', color: a.count===0 ? 'var(--danger)' : SERIES[i%SERIES.length]}));
+  renderBarChart(document.getElementById('activityChart'), items, {max:maxCount, showAvg:false});
+}
+
+function renderAmenityChart(){
+  const items = AMENITY_FREQ.map((a,i)=>({name:a.name, value:a.pct, display:a.pct+'%', color:SERIES[i%SERIES.length]}));
+  renderBarChart(document.getElementById('amenityChart'), items, {max:100, showAvg:false});
+}
+
+function renderHourlyBands(){
+  const items = HOURLY_BANDS.map((b,i)=>({name:b.name, value:b.high, display: b.low===b.high ? `₹${b.low.toLocaleString('en-IN')}/hr` : `₹${b.low.toLocaleString('en-IN')}–₹${b.high.toLocaleString('en-IN')}/hr`, color:SERIES[i%SERIES.length]}));
+  renderBarChart(document.getElementById('hourlyBandChart'), items, {max:5000});
+}
+
+function renderTierRanges(){
+  const items = TIER_RANGES.map((t,i)=>({name:t.name, value:t.high, display:`₹${t.low.toLocaleString('en-IN')}–₹${t.high.toLocaleString('en-IN')}`, color:SERIES[i%SERIES.length]}));
+  renderBarChart(document.getElementById('tierRangeChart'), items, {max:40000});
+}
+
+function renderSpaceChart(){
+  const items = SPACE_ALLOCATION.map((s,i)=>({name:s.name, value:s.sqft, display:s.sqft+' sq ft', color:SERIES[i%SERIES.length]}));
+  renderBarChart(document.getElementById('spaceChart'), items, {max:700, avgDisplay: v => v+' sq ft'});
+}
+
+function renderDesignTrends(){
+  const trends = [
+    {title:'Colored Accent Walls Are Now Standard', body:'8 of 14 studios feature bold accent colors (Bottoms Up has 6 interchangeable walls — Red, Yellow, Olive, Blue, Neutral, White). Sameness fatigue from plain backdrops is driving demand for color variety.'},
+    {title:'Natural Light Commands a Premium', body:'Only 3 studios (Seer Goregaon, Paxton Stage 2, Sugarcane) have natural light windows — and they command pricing premiums over comparable artificially-lit spaces in their vicinity.'},
+    {title:'Themed / Narrative Sets Are the New Battleground', body:'Bohemian Arcade leads with 13+ sets (including unique Elevator & ICU sets). Spotlight (5 sets), The Palette (4 summer-themed), Paxton Stage 2 (8 wall types). Studios with multiple distinct looks capture more repeat bookings.'},
+    {title:'Instagram-First Design Is Table Stakes', body:'Every studio explicitly designs for visual output. The differentiator is no longer "photo-friendly" but "how many distinct looks per hour can a creator get?" — favoring studios with quick-change walls and modular furniture.'},
+    {title:'Podcast-Specific Design Emerges', body:'Bottoms Up Studio is the first pure podcast & content studio in the dataset, with sound-treated walls and 6 wall colors optimized for video podcasting. This signals a new sub-category of studio design.'},
+  ];
+  document.getElementById('designTrends').innerHTML = trends.map(t=>`
+    <div class="card"><h3>${t.title}</h3><p style="font-size:.84rem;color:var(--text-secondary);margin:0">${t.body}</p></div>`).join('');
+}
+
+function renderGaps(){
+  document.getElementById('gapsContainer').innerHTML = GAPS.map(g=>`
+    <div class="card gap-card">
+      <span class="roi ${g.roi.toLowerCase().includes('very') || g.roi==='High' ? 'roi-high':'roi-medium'}">ROI: ${g.roi}</span>
+      <h3>${g.title}</h3>
+      <p style="font-size:.86rem;color:var(--text-secondary);margin:0">${g.body}</p>
+    </div>`).join('');
+}
+
+function renderRecs(){
+  document.getElementById('recsContainer').innerHTML = RECOMMENDATIONS.map(r=>`
+    <div class="card rec-card">
+      <h3>${r.title}</h3>
+      <p style="font-size:.86rem;color:var(--text-secondary);margin:0">${r.body}</p>
+    </div>`).join('');
+}
+
+function renderTrendLists(){
+  const up = [
+    'Podcast/audio recording — India podcast market growing 27.1% CAGR ($1.08B→$9.90B by 2034)',
+    'Creator economy explosion — India valued at $15.03B in 2026, heading to $61.87B by 2033',
+    'Multi-format studios — single sessions now combine brand shoots + podcast + reels',
+    'Hourly "quick-shoot" models emerging (Click OK ₹699/hr, Sugarcane ₹999/hr)',
+    'D2C brand UGC content — Mumbai has ~1,800 D2C-focused creators, HQ for 38% of ₹50Cr+ D2C brands',
+    'Sound-treated podcast corners and video-podcast optimized spaces',
+    'Interchangeable wall panels / themed sets (Bottoms Up: 6 colors, Bohemian Arcade: 13+ sets)',
+    'AI-powered content tools integrating with studio workflows (AIKONS, Infinite Horizon Studios)',
+  ];
+  const down = [
+    'Plain white/neutral-only backdrops — being displaced by color variety and themed sets',
+    'Long-term studio leases — giving way to flexible hourly/daily rental models',
+    'Single-purpose studios — losing ground to multi-format venues',
+    'Dance instruction / yoga / fitness classes — zero market validation across 14 analyzed studios',
+    'Music lessons / theater / drama — not represented in any studio\'s activity mix',
+    'All-in-one "bundled services" studios — creators increasingly prefer a la carte equipment rental (Bottoms Up model)',
+    'Mumbai monsoon outdoor shoots (June–Sep) — driving demand for reliable indoor studio space',
+  ];
+  document.getElementById('trendUp').innerHTML = up.map(t=>`<li>${t}</li>`).join('');
+  document.getElementById('trendDown').innerHTML = down.map(t=>`<li>${t}</li>`).join('');
+}
+
+function renderBenchmarkTable(){
+  const table = document.getElementById('benchmarkTable');
+  table.innerHTML = `
+    <thead><tr><th>Tier</th><th>Example Studios</th><th>Full-Day Range (8hr)</th><th>Hourly Range</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge tier-budget">Budget-Friendly</span></td><td>Sugarcane, Click OK, Dance Temple</td><td class="num">₹7,999–₹11,999</td><td class="num">₹699–₹999/hr</td></tr>
+      <tr><td><span class="badge tier-affordable">Affordable-Premium</span></td><td>Spotlight, Bottoms Up, Bohemian A</td><td class="num">₹10,000–₹18,000</td><td class="num">₹1,500–₹1,750/hr</td></tr>
+      <tr><td><span class="badge tier-midpremium">Mid-Premium</span></td><td>Seer AW, Seer GW, Paxton Stage 2</td><td class="num">₹12,000–₹22,000</td><td class="num">₹1,800–₹2,500/hr</td></tr>
+      <tr><td><span class="badge tier-premium">Premium</span></td><td>Paxton Grand Stage, Arterra</td><td class="num">₹26,000–₹38,000</td><td class="num">₹3,000–₹4,500/hr</td></tr>
+      <tr style="background:var(--bg-page)"><td><strong>BOE Target Gap</strong></td><td><strong>—</strong></td><td class="num"><strong>₹15,000–₹24,000</strong></td><td class="num"><strong>₹2,500–₹3,000/hr</strong></td></tr>
+    </tbody>`;
+}
+
+function renderRevenueTable(){
+  const table = document.getElementById('revenueTable');
+  const dayRate = 20000; // 8hr blended target (mid-premium positioning)
+  const scenarios = [
+    {label:'Conservative (12 bookings/mo)', bookings:12},
+    {label:'Base Case (18 bookings/mo)', bookings:18},
+    {label:'Optimistic (24 bookings/mo)', bookings:24},
+  ];
+  table.innerHTML = `
+    <thead><tr><th>Scenario</th><th>Bookings/mo</th><th>Monthly Revenue</th><th>Annual Revenue</th></tr></thead>
+    <tbody>
+      ${scenarios.map(s=>`<tr><td>${s.label}</td><td class="num">${s.bookings}</td><td class="num">${fmtINR(s.bookings*dayRate)}</td><td class="num">${fmtINR(s.bookings*dayRate*12)}</td></tr>`).join('')}
+    </tbody>`;
+}
+
+/* ================================================================
+   INTERACTIONS
+   ================================================================ */
+function bindFilterEvents(){
+  document.getElementById('fLocation').addEventListener('change', renderCompareTable);
+  document.getElementById('fSegment').addEventListener('change', renderCompareTable);
+  document.getElementById('fPrice').addEventListener('input', e=>{
+    document.getElementById('priceOut').textContent = fmtINR(e.target.value);
+    renderCompareTable();
+  });
+  document.getElementById('resetFilters').addEventListener('click', ()=>{
+    document.getElementById('fLocation').value = 'all';
+    document.getElementById('fSegment').value = 'all';
+    document.getElementById('fPrice').value = 45000;
+    document.getElementById('priceOut').textContent = fmtINR(45000);
+    if(window._msActivities) window._msActivities.clear();
+    if(window._msAmenities) window._msAmenities.clear();
+    renderCompareTable();
+  });
+}
+
+const PAGE_META = {
+  compare:  {title:'Studio Comparison', sub:'Mumbai rental studio market landscape'},
+  terms:    {title:'Terms & Policies', sub:'Full pricing, discounts, penalties and inclusions per studio'},
+  insights: {title:'Insights & Recommendations', sub:'Market synthesis and BOE strategy'},
+};
+
+function bindNavEvents(){
+  const items = document.querySelectorAll('#sidebarNav .nav-item');
+  items.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      items.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      document.getElementById('page-'+btn.dataset.page).classList.add('active');
+      const meta = PAGE_META[btn.dataset.page];
+      document.getElementById('topbarTitle').textContent = meta.title;
+      document.getElementById('topbarSubtitle').textContent = meta.sub;
+      document.getElementById('sidebarNav').classList.remove('open');
+    });
+  });
+}
+
+function bindMenuToggle(){
+  document.getElementById('menuBtn').addEventListener('click', ()=>{
+    document.querySelector('.sidebar').classList.toggle('mobile-open');
+  });
+}
+
+function bindCollapseToggle(){
+  const btn = document.getElementById('collapseBtn');
+  const sidebar = document.querySelector('.sidebar');
+  btn.addEventListener('click', ()=>{
+    sidebar.classList.toggle('collapsed');
+    btn.title = sidebar.classList.contains('collapsed') ? 'Expand sidebar' : 'Collapse sidebar';
+  });
+}
+
+function applyTheme(dark){
+  document.documentElement.classList.toggle('dark-mode', dark);
+  document.getElementById('themeKnob').innerHTML = dark ? '&#127769;' : '&#9728;';
+  document.getElementById('themeLabel').textContent = dark ? 'Dark mode' : 'Light mode';
+  try{ localStorage.setItem('boe-theme', dark ? 'dark' : 'light'); }catch(e){}
+}
+
+function bindThemeToggle(){
+  let dark = false;
+  try{ dark = localStorage.getItem('boe-theme') === 'dark'; }catch(e){}
+  applyTheme(dark);
+  document.getElementById('themeToggle').addEventListener('click', ()=>{
+    dark = !document.documentElement.classList.contains('dark-mode');
+    applyTheme(dark);
+  });
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+function init(){
+  populateFilterOptions();
+  bindFilterEvents();
+  bindNavEvents();
+  bindMenuToggle();
+  bindCollapseToggle();
+  bindThemeToggle();
+
+  renderCompareTable();
+  renderTerms();
+  renderKpis();
+  renderActivityChart();
+  renderAmenityChart();
+  renderHourlyBands();
+  renderTierRanges();
+  renderSpaceChart();
+  renderDesignTrends();
+  renderGaps();
+  renderRecs();
+  renderTrendLists();
+  renderBenchmarkTable();
+  renderRevenueTable();
+}
+init();
+</script>
+</body>
+</html>
